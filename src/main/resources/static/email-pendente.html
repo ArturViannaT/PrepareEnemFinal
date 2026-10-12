@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirme seu E-mail — Prepare ENEM</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .estado-carregando {
+            text-align: center;
+        }
+
+        .estado-carregando .spinner-grande {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(57, 197, 140, 0.1);
+            border-top-color: #39c58c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        .estado-pendente {
+            text-align: center;
+        }
+
+        .icone-grande {
+            font-size: 4rem;
+            color: #f59e0b;
+            margin: 1rem 0;
+            display: inline-block;
+        }
+
+        .box-alerta {
+            background: #fffbeb;
+            border: 2px solid #fcd34d;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        .box-alerta h3 {
+            color: #d97706;
+            margin: 0 0 0.75rem 0;
+            font-size: 1.1rem;
+        }
+
+        .box-alerta p {
+            color: #92400e;
+            margin: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .step-list {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        .step-list ol {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #607486;
+        }
+
+        .step-list li {
+            margin: 0.75rem 0;
+            color: #607486;
+        }
+
+        .step-list strong {
+            color: #17324d;
+        }
+
+        .botoes-grupo {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .botao-reenviar {
+            flex: 1;
+            min-width: 200px;
+            background: #39c58c;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .botao-reenviar:hover:not(:disabled) {
+            background: #2ab877;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(57, 197, 140, 0.3);
+        }
+
+        .botao-reenviar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .botao-logout {
+            flex: 1;
+            min-width: 200px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .botao-logout:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .mensagem-sucesso {
+            background: #ecfdf5;
+            border: 2px solid #39c58c;
+            color: #065f46;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .mensagem-erro {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .email-usuario {
+            background: #f0f9ff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #16499b;
+            margin: 1rem 0;
+            font-weight: 600;
+            color: #16499b;
+        }
+
+        .timer {
+            color: #f59e0b;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #ecfdf5 100%);">
+
+    <div class="card" style="width: 100%; max-width: 500px; padding: 2.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+        
+        <!-- Estado Carregando -->
+        <div id="estadoCarregando" class="estado-carregando" style="display: none;">
+            <h2 style="color: #17324d; margin-bottom: 0.5rem;">Verificando seu acesso...</h2>
+            <div class="spinner-grande"></div>
+            <p style="color: #607486;">Um momento, estamos verificando o status da sua conta.</p>
+        </div>
+
+        <!-- Estado Pendente -->
+        <div id="estadoPendente" class="estado-pendente" style="display: none;">
+            <h1 class="auth-logo" style="margin-bottom: 1rem;">
+                <img class="auth-logo-image" src="img/logo.png" alt="Logo Prepare Enem">
+                <span style="color: #16499b;">Prepare</span><span>Enem</span>
+            </h1>
+
+            <div class="icone-grande">
+                <i class="fas fa-envelope-open-text"></i>
+            </div>
+
+            <h2 style="color: #17324d; margin: 0.5rem 0; font-size: 1.5rem;">Confirme seu E-mail</h2>
+            <p style="color: #607486; margin: 1rem 0 0 0;">Você está logado, mas precisa confirmar seu e-mail para acessar o site.</p>
+
+            <!-- Caixa de Alerta -->
+            <div class="box-alerta">
+                <h3><i class="fas fa-info-circle"></i> Sua conta está pendente de confirmação</h3>
+                <p>Enviamos um link de confirmação para:</p>
+                <div class="email-usuario" id="emailDisplay">seu-email@exemplo.com</div>
+                <p><strong>O que fazer agora:</strong></p>
+            </div>
+
+            <!-- Passos -->
+            <div class="step-list">
+                <ol>
+                    <li>Abra seu e-mail (verifique também a pasta de <strong>Spam</strong> ou <strong>Promotions</strong>)</li>
+                    <li>Procure pelo e-mail de "<strong>Confirm your email</strong>" ou "<strong>Confirme seu e-mail</strong>"</li>
+                    <li>Clique no botão azul ou no link dentro do e-mail</li>
+                    <li>Você será redirecionado para a página de confirmação</li>
+                    <li>Após confirmar, você poderá acessar o site normalmente</li>
+                </ol>
+            </div>
+
+            <!-- Mensagens -->
+            <div class="mensagem-sucesso" id="mensagemSucesso">
+                <i class="fas fa-check-circle"></i> E-mail reenviado com sucesso! Verifique sua caixa de entrada.
+            </div>
+            <div class="mensagem-erro" id="mensagemErro"></div>
+
+            <!-- Timer de reenvio -->
+            <div class="timer" id="timerReenvio" style="display: none;">
+                ⏱️ Você poderá reenviar em <span id="contagem">30</span>s
+            </div>
+
+            <!-- Botões -->
+            <div class="botoes-grupo">
+                <button class="botao-reenviar" id="btnReenviar">
+                    <i class="fas fa-redo"></i> Reenviar E-mail
+                </button>
+                <button class="botao-logout" id="btnSair">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </div>
+
+            <!-- Dicas Extras -->
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <p style="font-size: 0.85rem; color: #6b7280; margin: 0;">
+                    <strong>💡 Dica:</strong> Se não encontrar o e-mail em lugar nenhum, clique em "Reenviar E-mail" para receber um novo link.
+                </p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin: 0.75rem 0 0 0;">
+                    <strong>❓ Link expirou?</strong> Os links têm validade de 24 horas. Reenviaremos um novo link caso o anterior tenha expirado.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="js/supabase.js"></script>
+    <script>
+        const estadoCarregando = document.getElementById('estadoCarregando');
+        const estadoPendente = document.getElementById('estadoPendente');
+        const btnReenviar = document.getElementById('btnReenviar');
+        const btnSair = document.getElementById('btnSair');
+        const emailDisplay = document.getElementById('emailDisplay');
+        const mensagemSucesso = document.getElementById('mensagemSucesso');
+        const mensagemErro = document.getElementById('mensagemErro');
+        const timerReenvio = document.getElementById('timerReenvio');
+        const contagem = document.getElementById('contagem');
+
+        let ultimaRequisicao = 0;
+        let podeReenviar = true;
+
+        /**
+         * Exibe mensagem de sucesso
+         */
+        function showSucesso(mensagem) {
+            mensagemSucesso.textContent = `✓ ${mensagem}`;
+            mensagemSucesso.style.display = 'block';
+            mensagemErro.style.display = 'none';
+            setTimeout(() => {
+                mensagemSucesso.style.display = 'none';
+            }, 5000);
+        }
+
+        /**
+         * Exibe mensagem de erro
+         */
+        function showErro(mensagem) {
+            mensagemErro.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${mensagem}`;
+            mensagemErro.style.display = 'block';
+            mensagemSucesso.style.display = 'none';
+        }
+
+        /**
+         * Inicia timer de reenvio
+         */
+        function iniciarTimerReenvio() {
+            podeReenviar = false;
+            btnReenviar.disabled = true;
+            timerReenvio.style.display = 'block';
+            
+            let segundos = 30;
+            const intervalo = setInterval(() => {
+                segundos--;
+                contagem.textContent = segundos;
+                
+                if (segundos <= 0) {
+                    clearInterval(intervalo);
+                    podeReenviar = true;
+                    btnReenviar.disabled = false;
+                    timerReenvio.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        /**
+         * Reenviar email de confirmação
+         */
+        btnReenviar.addEventListener('click', async () => {
+            if (!podeReenviar) return;
+
+            try {
+                btnReenviar.disabled = true;
+                const client = getSupabaseClient();
+                const session = await getCurrentSession();
+
+                if (!session || !session.user) {
+                    showErro('Sessão expirada. Por favor, faça login novamente.');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                    return;
+                }
+
+                // Fazer o resend do email
+                const { error } = await client.auth.resend({
+                    type: 'signup',
+                    email: session.user.email,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/email-confirmado.html`
+                    }
+                });
+
+                if (error) {
+                    showErro(`Erro ao reenviar: ${error.message}`);
+                    btnReenviar.disabled = false;
+                } else {
+                    showSucesso('E-mail de confirmação reenviado com sucesso!');
+                    iniciarTimerReenvio();
+                }
+            } catch (err) {
+                console.error('Erro ao reenviar email:', err);
+                showErro('Erro ao reenviar e-mail. Tente novamente.');
+                btnReenviar.disabled = false;
+            }
+        });
+
+        /**
+         * Fazer logout
+         */
+        btnSair.addEventListener('click', async () => {
+            try {
+                btnSair.disabled = true;
+                const client = getSupabaseClient();
+                await client.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (err) {
+                console.error('Erro ao fazer logout:', err);
+                // Redirecionar mesmo assim
+                window.location.href = 'login.html';
+            }
+        });
+
+        /**
+         * Inicializar página
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            estadoCarregando.style.display = 'block';
+
+            try {
+                const session = await getCurrentSession();
+                const user = await getCurrentUser();
+
+                if (!session) {
+                    // Não está logado, redirecionar para login
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                if (!user || !user.email) {
+                    showErro('Erro ao carregar dados do usuário.');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                    return;
+                }
+
+                // Verificar se email já está confirmado
+                if (await isEmailConfirmed()) {
+                    // Email já confirmado, ir para dashboard
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                // Email não confirmado, mostrar página de pendência
+                estadoCarregando.style.display = 'none';
+                estadoPendente.style.display = 'block';
+                emailDisplay.textContent = user.email;
+
+            } catch (err) {
+                console.error('Erro ao verificar sessão:', err);
+                showErro('Erro ao carregar página. Redirecionando...');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            }
+        });
+
+        // Verificar se email foi confirmado a cada 5 segundos (enquanto página está visível)
+        let ultimaVerificacao = Date.now();
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && Date.now() - ultimaVerificacao > 5000) {
+                try {
+                    if (await isEmailConfirmed()) {
+                        // Email foi confirmado, ir para dashboard
+                        showSucesso('E-mail confirmado com sucesso! Redirecionando...');
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1500);
+                    }
+                    ultimaVerificacao = Date.now();
+                } catch (err) {
+                    console.warn('Erro ao verificar confirmação:', err);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

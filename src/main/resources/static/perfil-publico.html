@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare Enem — Perfil Público</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1 id="tituloPerfil">Perfil Público</h1>
+            <div class="user-status">
+                <div class="pontos" title="Seus pontos">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Seu nível">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <div id="mensagem" style="display: none; margin-bottom: 1.25rem;"></div>
+
+        <div class="card" id="cardPerfil" style="display: none; margin-bottom: 2rem;"></div>
+
+        <div class="card" id="cardConteudos" style="display: none;">
+            <h2><i class="fas fa-book-open" style="color: var(--primary); margin-right: 0.5rem;"></i> Materiais públicos publicados</h2>
+            <div id="listaConteudos" style="margin-top: 1rem;"></div>
+        </div>
+
+        <div class="stack" style="margin-top: 1.5rem;">
+            <a href="perfil.html" class="botao botao-secundario"><i class="fas fa-arrow-left"></i> Voltar ao ranking</a>
+        </div>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        function avatarHTML(perfil) {
+            if (perfil.fotoPerfil) {
+                return `<span class="avatar avatar--lg"><img src="${perfil.fotoPerfil}" alt="Foto de ${perfil.nome}"></span>`;
+            }
+            const inicial = (perfil.nome || '?').trim().charAt(0).toUpperCase();
+            return `<span class="avatar avatar--lg">${inicial}</span>`;
+        }
+
+        function renderizarPerfil(perfil) {
+            document.getElementById('tituloPerfil').innerText = `Perfil de ${perfil.nome}`;
+
+            let detalhes = '';
+            if (perfil.tipo === 'ALUNO') {
+                detalhes = `
+                    <div class="resultado-resumo">
+                        <div class="resultado-item"><strong>${Math.round(perfil.pontos || 0)}</strong><span>Pontuação total</span></div>
+                        <div class="resultado-item"><strong>Nível ${perfil.nivel || 1}</strong><span>Nível atual</span></div>
+                        <div class="resultado-item"><strong>${perfil.quizzesResolvidos || 0}</strong><span>Quizzes realizados</span></div>
+                        <div class="resultado-item"><strong>${perfil.posicaoRanking ? perfil.posicaoRanking + 'º' : '-'}</strong><span>Posição no ranking</span></div>
+                    </div>`;
+            } else if (perfil.tipo === 'PROFESSOR') {
+                detalhes = `
+                    <p><strong>Instituição:</strong> ${perfil.instituicao || 'Não informada'}</p>
+                    <p><strong>Quizzes criados:</strong> ${perfil.totalQuizzes || 0}</p>`;
+            }
+
+            document.getElementById('cardPerfil').innerHTML = `
+                <div class="stack" style="align-items: center; gap: 1.5rem;">
+                    ${avatarHTML(perfil)}
+                    <div>
+                        <h2 style="margin-bottom: 0.25rem;">${perfil.nome}</h2>
+                        <span class="badge badge-azul">${perfil.tipo}</span>
+                    </div>
+                </div>
+                <p style="margin-top: 1.25rem;"><strong>Descrição:</strong>
+                   ${perfil.descricao ? perfil.descricao : '<span class="hint">Este usuário ainda não escreveu uma descrição.</span>'}</p>
+                ${detalhes}
+            `;
+            document.getElementById('cardPerfil').style.display = 'block';
+        }
+
+        function renderizarConteudos(conteudos) {
+            const card = document.getElementById('cardConteudos');
+            const lista = document.getElementById('listaConteudos');
+
+            if (!conteudos) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            if (conteudos.length === 0) {
+                lista.innerHTML = '<p class="empty-state">Nenhum material público publicado.</p>';
+                return;
+            }
+
+            lista.innerHTML = conteudos.map(c => `
+                <div class="detalhe-questao">
+                    <strong>${c.titulo}</strong>
+                    <p class="hint">Matéria: ${c.materia}</p>
+                    ${c.urlVideo ? `<a href="${c.urlVideo}" target="_blank" style="color: var(--secondary); font-weight: 600;">
+                        <i class="fab fa-youtube"></i> Vídeo anexado</a>` : ''}
+                </div>
+            `).join('');
+        }
+
+        /** Carrega o perfil público informado em ?id=... (somente dados públicos). */
+        async function carregarPerfilPublico() {
+            await montarLayout();
+
+            const id = new URLSearchParams(window.location.search).get('id');
+            if (!id) {
+                mostrarMensagem('mensagem', 'Nenhum usuário foi informado na URL (use ?id=123).', 'error');
+                return;
+            }
+
+            try {
+                const perfil = await apiFetch(`/users/profile/${id}`);
+                renderizarPerfil(perfil);
+                renderizarConteudos(perfil.conteudosPublicos);
+            } catch (err) {
+                console.error('Erro ao carregar o perfil público:', err);
+                mostrarMensagem('mensagem', 'Não foi possível carregar este perfil: ' + err.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarPerfilPublico);
+    </script>
+</body>
+</html>

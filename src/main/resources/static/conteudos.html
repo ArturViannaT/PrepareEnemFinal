@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Materiais Didáticos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1>Materiais Didáticos</h1>
+
+            <div class="user-status">
+                <div class="pontos" title="Pontos de experiência">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Nível">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Abas de Navegação -->
+        <div id="mensagem" style="display: none; margin-bottom: 1rem;"></div>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <button class="botao" id="tabPublicosBtn" onclick="trocarAba('publicos')"><i class="fas fa-globe"></i> Materiais Públicos</button>
+            <button class="botao botao-secundario" id="tabMeusBtn" style="display: none;" onclick="trocarAba('meus')"><i class="fas fa-folder-open"></i> Meus Materiais</button>
+            <button class="botao botao-azul" id="tabNovoBtn" style="display: none;" onclick="trocarAba('novo')"><i class="fas fa-plus-circle"></i> Publicar Novo Material</button>
+        </div>
+
+        <!-- Formulário de Publicação / Edição (Professor) -->
+        <div class="card" id="formConteudoCard" style="display: none; margin-bottom: 2rem;">
+            <h2 id="formConteudoTitulo">Publicar Novo Material Didático</h2>
+            <form id="conteudoForm" style="margin-top: 1rem;">
+                <input type="hidden" id="editConteudoId" value="">
+                <div class="form-group">
+                    <label>Título do Material</label>
+                    <input type="text" id="tituloInput" class="form-control" placeholder="Ex: Química - Funções Orgânicas" required>
+                </div>
+                <div class="form-group">
+                    <label>Matéria</label>
+                    <input type="text" id="materiaInput" class="form-control" placeholder="Ex: Química" required>
+                </div>
+                <div class="form-group">
+                    <label>Texto Teórico Explicativo</label>
+                    <textarea id="textoInput" class="form-control" rows="5" placeholder="Escreva o texto explicativo do conteúdo..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>URL de Vídeo Anexado (Opcional)</label>
+                    <input type="url" id="videoInput" class="form-control" placeholder="https://youtube.com/watch?v=...">
+                </div>
+                <div class="form-group">
+                    <label>Visibilidade</label>
+                    <select id="visibilidadeInput" class="form-control" required>
+                        <option value="PUBLICO">Público (Visível a todos)</option>
+                        <option value="PRIVADO">Privado (Apenas do professor)</option>
+                    </select>
+                </div>
+                <button type="submit" class="botao"><i class="fas fa-save"></i> Salvar Material</button>
+            </form>
+        </div>
+
+        <!-- Seção de Lista de Materiais -->
+        <section class="material-list" id="materialListContainer">
+            <div class="card material-card"><p>Carregando materiais...</p></div>
+        </section>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        let usuarioAtual = null;
+        let abaAtiva = 'publicos';
+        let conteudosCarregados = [];
+
+        async function inicializar() {
+            usuarioAtual = await montarLayout();
+            if (!usuarioAtual) return;
+
+            if (usuarioAtual.tipo === 'PROFESSOR') {
+                document.getElementById('tabMeusBtn').style.display = 'inline-flex';
+                document.getElementById('tabNovoBtn').style.display = 'inline-flex';
+            }
+
+            trocarAba('publicos');
+        }
+
+        function trocarAba(aba) {
+            abaAtiva = aba;
+            document.getElementById('formConteudoCard').style.display = (aba === 'novo') ? 'block' : 'none';
+            document.getElementById('tabPublicosBtn').className = (aba === 'publicos') ? 'botao' : 'botao botao-secundario';
+
+            const meus = document.getElementById('tabMeusBtn');
+            if (meus) meus.className = (aba === 'meus') ? 'botao' : 'botao botao-secundario';
+
+            const novo = document.getElementById('tabNovoBtn');
+            if (novo) novo.className = (aba === 'novo') ? 'botao botao-azul' : 'botao botao-secundario';
+
+            if (aba === 'publicos') carregarConteudosPublicos();
+            if (aba === 'meus') carregarMeusConteudos();
+        }
+
+        async function carregarConteudosPublicos() {
+            const container = document.getElementById('materialListContainer');
+            try {
+                const lista = await apiFetch('/contents');
+                conteudosCarregados = lista;
+                container.innerHTML = '';
+
+                if (lista.length === 0) {
+                    container.innerHTML = '<div class="card material-card"><p class="empty-state">Nenhum material público disponível no momento.</p></div>';
+                    return;
+                }
+
+                lista.forEach(c => renderizarCardMaterial(c, container, false));
+            } catch (err) {
+                console.error('Erro ao listar materiais públicos:', err);
+                container.innerHTML = `<div class="card material-card" style="color: #ef4444;"><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function carregarMeusConteudos() {
+            const container = document.getElementById('materialListContainer');
+            try {
+                const lista = await apiFetch('/contents/my');
+                conteudosCarregados = lista;
+                container.innerHTML = '';
+
+                if (lista.length === 0) {
+                    container.innerHTML = '<div class="card material-card"><p class="empty-state">Você ainda não publicou nenhum material.</p></div>';
+                    return;
+                }
+
+                lista.forEach(c => renderizarCardMaterial(c, container, true));
+            } catch (err) {
+                console.error('Erro ao listar meus materiais:', err);
+                container.innerHTML = `<div class="card material-card" style="color: #ef4444;"><p>${err.message}</p></div>`;
+            }
+        }
+
+        /** Renderiza a avaliação por estrelas (1 a 5) para o conteúdo. */
+        function estrelasHTML(conteudo) {
+            const minha = conteudo.minhaAvaliacao || 0;
+            const botoes = [1, 2, 3, 4, 5].map(n =>
+                `<button type="button" class="${minha >= n ? 'ativa' : ''}" title="${n} estrela(s)"
+                         onclick="avaliar(${conteudo.conteudoId}, ${n})">★</button>`).join('');
+            return `
+                <div class="stack">
+                    <span class="stars" data-conteudo="${conteudo.conteudoId}">${botoes}</span>
+                    <span class="rating-info">
+                        Média ${Number(conteudo.mediaEstrelas || 0).toFixed(1)}/5.0
+                        (${conteudo.totalAvaliacoes || 0} avaliação(ões))${minha ? ' • sua nota: ' + minha : ''}
+                    </span>
+                </div>`;
+        }
+
+        function renderizarCardMaterial(c, container, ehAutor) {
+            const div = document.createElement('div');
+            div.className = 'card material-card';
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                    <h2>${c.titulo}</h2>
+                    <span class="badge ${c.visibilidade === 'PUBLICO' ? 'badge-facil' : 'badge-dificil'}">${c.visibilidade}</span>
+                </div>
+                <p><strong>Matéria:</strong> ${c.materia}</p>
+                <p><strong>Professor:</strong> <a href="perfil-publico.html?id=${c.autorId}" style="color: var(--secondary); font-weight: 600;">${c.autorNome || c.emailProfessor}</a></p>
+                <p class="conteudo-texto" style="margin: 0.5rem 0;">${c.texto}</p>
+                ${c.urlVideo ? `<p><a href="${c.urlVideo}" target="_blank" style="color: var(--secondary); font-weight: 600;"><i class="fab fa-youtube"></i> Assistir Vídeo Anexado</a></p>` : ''}
+
+                <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    ${estrelasHTML(c)}
+                    ${ehAutor ? `
+                        <div class="stack">
+                            <button class="botao botao-azul" onclick="prepararEdicao(${c.conteudoId})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="botao botao-perigo" onclick="excluir(${c.conteudoId})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        /** Avalia (1 a 5 estrelas). Se o usuário já avaliou, a nota é ATUALIZADA, não duplicada. */
+        async function avaliar(conteudoId, estrelas) {
+            if (!estrelas || estrelas < 1 || estrelas > 5) return;
+
+            try {
+                const resposta = await apiFetch(`/contents/${conteudoId}/rate`, {
+                    method: 'POST',
+                    body: JSON.stringify({ estrelas: estrelas })
+                });
+
+                // Atualiza o item local com a média devolvida pelo backend (fonte de verdade).
+                const item = conteudosCarregados.find(c => c.conteudoId === conteudoId);
+                if (item) {
+                    item.mediaEstrelas = resposta.mediaEstrelas;
+                    item.totalAvaliacoes = resposta.totalAvaliacoes;
+                    item.minhaAvaliacao = resposta.estrelas;
+                }
+
+                mostrarMensagem('mensagem', `Avaliação registrada: ${resposta.estrelas} estrela(s). `
+                    + `Média atual do material: ${Number(resposta.mediaEstrelas).toFixed(1)}/5.0.`, 'success');
+
+                if (abaAtiva === 'meus') carregarMeusConteudos(); else carregarConteudosPublicos();
+            } catch (err) {
+                console.error('Erro ao avaliar conteúdo:', err);
+                mostrarMensagem('mensagem', 'Não foi possível salvar sua avaliação: ' + err.message, 'error');
+            }
+        }
+
+        /** Abre o formulário preenchido com os dados do material selecionado (somente o autor). */
+        function prepararEdicao(id) {
+            const c = conteudosCarregados.find(item => item.conteudoId === id);
+            if (!c) {
+                mostrarMensagem('mensagem', 'Material não encontrado na lista atual.', 'error');
+                return;
+            }
+
+            document.getElementById('editConteudoId').value = c.conteudoId;
+            document.getElementById('formConteudoTitulo').innerText = 'Editar Material Didático';
+            document.getElementById('tituloInput').value = c.titulo;
+            document.getElementById('materiaInput').value = c.materia;
+            document.getElementById('textoInput').value = c.texto;
+            document.getElementById('videoInput').value = c.urlVideo || '';
+            document.getElementById('visibilidadeInput').value = c.visibilidade;
+            trocarAba('novo');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function excluir(conteudoId) {
+            if (!confirm('Tem certeza que deseja excluir este conteúdo? As avaliações dele também serão removidas.')) return;
+            try {
+                await apiFetch(`/contents/${conteudoId}`, { method: 'DELETE' });
+                mostrarMensagem('mensagem', 'Conteúdo excluído com sucesso.', 'success');
+                carregarMeusConteudos();
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Não foi possível excluir o conteúdo: ' + err.message, 'error');
+            }
+        }
+
+        document.getElementById('conteudoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('editConteudoId').value;
+            const payload = {
+                titulo: document.getElementById('tituloInput').value.trim(),
+                materia: document.getElementById('materiaInput').value.trim(),
+                texto: document.getElementById('textoInput').value.trim(),
+                urlVideo: document.getElementById('videoInput').value.trim() || null,
+                visibilidade: document.getElementById('visibilidadeInput').value
+            };
+
+            try {
+                if (editId) {
+                    await apiFetch(`/contents/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
+                    mostrarMensagem('mensagem', 'Material atualizado com sucesso.', 'success');
+                } else {
+                    await apiFetch('/contents', { method: 'POST', body: JSON.stringify(payload) });
+                    mostrarMensagem('mensagem', 'Material publicado com sucesso.', 'success');
+                }
+                document.getElementById('conteudoForm').reset();
+                document.getElementById('editConteudoId').value = '';
+                document.getElementById('formConteudoTitulo').innerText = 'Publicar Novo Material Didático';
+                trocarAba('meus');
+            } catch (err) {
+                console.error('Erro ao salvar material:', err);
+                mostrarMensagem('mensagem', 'Não foi possível salvar o material: ' + err.message, 'error');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', inicializar);
+    </script>
+</body>
+</html>

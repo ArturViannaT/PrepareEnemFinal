@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Início</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1 id="saudacaoHeader">Olá, como vai treinar hoje?</h1>
+
+            <div class="user-status">
+                <div class="pontos" title="Pontos de experiência">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Nível Atual">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Seção de Ações Rápidas -->
+        <section class="action-cards">
+            <div class="card quiz-card">
+                <div class="card-content">
+                    <h2>Quizzes Adaptativos</h2>
+                    <p>Teste seus conhecimentos com questões do ENEM. A pontuação varia conforme o seu desempenho e a dificuldade!</p>
+                    <a class="botao quiz-botao" href="quizzes.html">
+                        <i class="fas fa-play"></i> Começar
+                    </a>
+                </div>
+            </div>
+
+            <div class="card material-card">
+                <div class="card-content">
+                    <h2>Material Didático</h2>
+                    <p>Acesse conteúdos teóricos publicados por professores para fortalecer sua base de conhecimento.</p>
+                    <a class="botao" href="conteudos.html">
+                        <i class="fas fa-book-open"></i> Acessar
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Histórico de Desempenho em Quizzes -->
+        <div class="card" style="margin-bottom: 2rem;" id="secaoTentativas">
+            <h2><i class="fas fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i> Desempenho em Quizzes Realizados</h2>
+            <p>Seu histórico de quizzes concluídos, tempo gasto e pontos obtidos.</p>
+            <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Quiz</th>
+                        <th>Matéria</th>
+                        <th>Acertos</th>
+                        <th>Tempo Gasto</th>
+                        <th>Pontos Obtidos</th>
+                        <th>Realizado em</th>
+                    </tr>
+                </thead>
+                <tbody id="tentativasTableBody">
+                    <tr><td colspan="6">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <!-- Histórico de Materiais Acessados -->
+        <div class="card">
+            <h2><i class="fas fa-history" style="color: var(--secondary); margin-right: 0.5rem;"></i> Histórico de Conteúdos Acessados</h2>
+            <p>Últimos materiais teóricos que você visualizou na plataforma.</p>
+            <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Matéria</th>
+                        <th>Data/Hora de Acesso</th>
+                    </tr>
+                </thead>
+                <tbody id="historicoTableBody">
+                    <tr><td colspan="3">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        async function carregarPainel() {
+            const me = await montarLayout();
+            if (!me) return;
+
+            document.getElementById('saudacaoHeader').innerText = `Olá, ${me.nome}! Como vai treinar hoje?`;
+
+            if (me.tipo === 'ALUNO') {
+                carregarHistoricoTentativas();
+            } else {
+                // Área do professor: a seção de desempenho de quizzes não se aplica
+                document.getElementById('secaoTentativas').innerHTML =
+                    '<h2><i class="fas fa-chalkboard-user" style="color: var(--primary); margin-right: 0.5rem;"></i> Área do Professor</h2>'
+                    + '<p class="hint">Você está autenticado como professor. Use o menu <strong>Materiais</strong> para publicar '
+                    + 'conteúdos e o menu <strong>Quizzes</strong> para criar atividades, questões, definir dificuldade e tempo limite.</p>';
+            }
+
+            carregarHistoricoAcessos();
+        }
+
+        async function carregarHistoricoTentativas() {
+            try {
+                const tentativas = await apiFetch('/quizzes/attempts');
+                const tbody = document.getElementById('tentativasTableBody');
+                tbody.innerHTML = '';
+
+                if (tentativas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">Nenhum quiz realizado ainda.</td></tr>';
+                    return;
+                }
+
+                tentativas.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${t.nomeQuizz}</strong></td>
+                        <td>${t.materia || 'Geral'}</td>
+                        <td>${t.acertos} / ${t.totalQuestoes}</td>
+                        <td>${t.tempoGasto}s</td>
+                        <td><strong style="color: var(--primary);">+${Math.round(t.pontuacaoGanha)} pts</strong></td>
+                        <td>${new Date(t.realizadoEm).toLocaleString('pt-BR')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Erro ao carregar o histórico de tentativas:', err);
+                const tbody = document.getElementById('tentativasTableBody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="6">Não foi possível carregar o histórico: ${err.message}</td></tr>`;
+                }
+            }
+        }
+
+        async function carregarHistoricoAcessos() {
+            try {
+                const historico = await apiFetch('/contents/history');
+                const tbody = document.getElementById('historicoTableBody');
+                tbody.innerHTML = '';
+
+                if (historico.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">Nenhum histórico de acesso registrado.</td></tr>';
+                    return;
+                }
+
+                historico.forEach(h => {
+                    const dataFmt = new Date(h.acessadoEm).toLocaleString('pt-BR');
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${h.titulo}</strong></td>
+                        <td>${h.materia || 'Geral'}</td>
+                        <td>${dataFmt}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Erro ao carregar o histórico de conteúdos:', err);
+                const tbody = document.getElementById('historicoTableBody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="3">Não foi possível carregar o histórico: ${err.message}</td></tr>`;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarPainel);
+    </script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Quizzes & Desafios</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1>Quizzes & Desafios</h1>
+
+            <div class="user-status">
+                <div class="pontos" title="Pontos de experiência">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Nível">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Abas -->
+        <div id="mensagem" style="display: none; margin-bottom: 1rem;"></div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <button class="botao" id="tabTodosBtn" onclick="trocarAbaQuizz('todos')"><i class="fas fa-list"></i> Quizzes Disponíveis</button>
+            <button class="botao botao-secundario" id="tabMeusQuizzesBtn" style="display: none;" onclick="trocarAbaQuizz('meus')"><i class="fas fa-folder"></i> Meus Quizzes</button>
+            <button class="botao botao-azul" id="tabNovoQuizzBtn" style="display: none;" onclick="trocarAbaQuizz('novo')"><i class="fas fa-plus-circle"></i> Publicar Quiz</button>
+            <button class="botao botao-secundario" id="tabRecalcularBtn" style="display: none;" onclick="recalcularPontuacao()"><i class="fas fa-calculator"></i> Recalcular Pontuação</button>
+        </div>
+
+        <!-- Formulário de Criação/Edição de Quiz (Professor) -->
+        <div class="card" id="formQuizzCard" style="display: none; margin-bottom: 2rem;">
+            <h2 id="formQuizzTitulo">Criar Atividade / Quiz Objetivos</h2>
+            <p class="hint" style="margin-bottom: 1rem;">
+                Cada questão tem uma <strong>dificuldade inicial</strong> definida pelo professor
+                (Fácil = 10 pts, Intermediária = 50 pts, Difícil = 100 pts). Após 10 respostas válidas de alunos,
+                o sistema recalibra automaticamente a dificuldade da questão com base no percentual de acertos.
+            </p>
+            <form id="quizzForm" style="margin-top: 1rem;">
+                <input type="hidden" id="editQuizzId" value="">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nome do Quiz</label>
+                        <input type="text" id="nomeQuizzInput" class="form-control" placeholder="Ex: Simulado de Física - Cinemática" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Matéria</label>
+                        <input type="text" id="materiaQuizzInput" class="form-control" placeholder="Ex: Física" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dificuldade Geral</label>
+                        <select id="dificuldadeQuizzInput" class="form-control" required>
+                            <option value="FACIL">Fácil</option>
+                            <option value="INTERMEDIARIA" selected>Intermediária</option>
+                            <option value="DIFICIL">Difícil</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tempo Limite (segundos)</label>
+                        <input type="number" id="tempoQuizzInput" class="form-control" placeholder="Ex: 300 (5 minutos)" required min="30">
+                    </div>
+                    <div class="form-group">
+                        <label>URL de Vídeo Explicativo (Opcional)</label>
+                        <input type="url" id="videoQuizzInput" class="form-control" placeholder="https://youtube.com/...">
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Questões Objetivas</h3>
+                    <button type="button" class="botao botao-secundario" onclick="adicionarQuestaoFormulario()">
+                        <i class="fas fa-plus"></i> Adicionar questão
+                    </button>
+                </div>
+
+                <div id="questoesContainer" style="margin-top: 1rem;"></div>
+
+                <div class="stack" style="margin-top: 1rem;">
+                    <button type="submit" class="botao"><i class="fas fa-save"></i> Salvar Quiz</button>
+                    <button type="button" class="botao botao-secundario" onclick="cancelarEdicao()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <section class="material-list" id="quizzesLista">
+            <div class="card material-card"><p>Carregando quizzes...</p></div>
+        </section>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        let usuarioAtual = null;
+        let abaAtivaQuizz = 'todos';
+        let contadorQuestoes = 0;
+
+        const ROTULOS_DIFICULDADE = {
+            FACIL: 'Fácil (10 pts)',
+            INTERMEDIARIA: 'Intermediária (50 pts)',
+            DIFICIL: 'Difícil (100 pts)'
+        };
+
+        async function carregarPerfilEQuizzes() {
+            usuarioAtual = await montarLayout();
+            if (!usuarioAtual) return;
+
+            if (usuarioAtual.tipo === 'PROFESSOR') {
+                document.getElementById('tabMeusQuizzesBtn').style.display = 'inline-flex';
+                document.getElementById('tabNovoQuizzBtn').style.display = 'inline-flex';
+                document.getElementById('tabRecalcularBtn').style.display = 'inline-flex';
+            }
+
+            trocarAbaQuizz('todos');
+        }
+
+        function trocarAbaQuizz(aba) {
+            abaAtivaQuizz = aba;
+            document.getElementById('formQuizzCard').style.display = (aba === 'novo') ? 'block' : 'none';
+            document.getElementById('tabTodosBtn').className = (aba === 'todos') ? 'botao' : 'botao botao-secundario';
+
+            const meus = document.getElementById('tabMeusQuizzesBtn');
+            if (meus) meus.className = (aba === 'meus') ? 'botao' : 'botao botao-secundario';
+
+            const novo = document.getElementById('tabNovoQuizzBtn');
+            if (novo) novo.className = (aba === 'novo') ? 'botao botao-azul' : 'botao botao-secundario';
+
+            if (aba === 'todos') carregarTodosQuizzes();
+            if (aba === 'meus') carregarMeusQuizzes();
+            if (aba === 'novo' && contadorQuestoes === 0) adicionarQuestaoFormulario();
+        }
+
+        async function carregarTodosQuizzes() {
+            const container = document.getElementById('quizzesLista');
+            try {
+                const lista = await apiFetch('/quizzes');
+                container.innerHTML = '';
+
+                if (lista.length === 0) {
+                    container.innerHTML = '<div class="card material-card"><p class="empty-state">Nenhum quiz disponível no momento.</p></div>';
+                    return;
+                }
+
+                lista.forEach(q => renderizarCardQuizz(q, container, q.autorId === (usuarioAtual && usuarioAtual.id)));
+            } catch (err) {
+                console.error('Erro ao listar quizzes:', err);
+                container.innerHTML = `<div class="card material-card" style="color: #ef4444;"><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function carregarMeusQuizzes() {
+            const container = document.getElementById('quizzesLista');
+            try {
+                const lista = await apiFetch('/quizzes/my');
+                container.innerHTML = '';
+
+                if (lista.length === 0) {
+                    container.innerHTML = '<div class="card material-card"><p class="empty-state">Você ainda não criou nenhum quiz.</p></div>';
+                    return;
+                }
+
+                lista.forEach(q => renderizarCardQuizz(q, container, true));
+            } catch (err) {
+                console.error('Erro ao listar meus quizzes:', err);
+                container.innerHTML = `<div class="card material-card" style="color: #ef4444;"><p>${err.message}</p></div>`;
+            }
+        }
+
+        function renderizarCardQuizz(q, container, ehAutor) {
+            const badgeClass = q.dificuldadeGeral === 'FACIL' ? 'badge-facil'
+                : (q.dificuldadeGeral === 'DIFICIL' ? 'badge-dificil' : 'badge-medio');
+
+            const questoes = q.questoes || [];
+            const listaQuestoes = ehAutor && questoes.length > 0
+                ? `<details style="margin-top:0.75rem;">
+                       <summary class="hint" style="cursor:pointer;">Ver questões, dificuldade e desempenho</summary>
+                       ${questoes.map((qq, i) => `
+                           <div class="detalhe-questao" style="margin-top:0.5rem;">
+                               <strong>${i + 1}. ${qq.pergunta}</strong>
+                               <p class="hint">Dificuldade inicial: ${qq.dificuldadeInicial} • Dificuldade atual: ${qq.dificuldadeAtual}
+                                  • Valor atual: ${qq.valorPontos} pts
+                                  ${qq.calibrada ? ' • recalibrada' : ''}</p>
+                               <p class="hint">Respostas: ${qq.totalRespostas || 0} • Acertos: ${qq.totalAcertos || 0}
+                                  • Percentual: ${qq.percentualAcertos || 0}%</p>
+                           </div>
+                       `).join('')}
+                   </details>`
+                : '';
+
+            const div = document.createElement('div');
+            div.className = 'card material-card';
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                    <h2>${q.nomeQuizz}</h2>
+                    <span class="badge ${badgeClass}">${q.dificuldadeGeral}</span>
+                </div>
+                <p><strong>Matéria:</strong> ${q.materia}</p>
+                <p><strong>Autor:</strong> ${q.autorNome || 'Não informado'}</p>
+                <p><strong>Tempo Limite:</strong> ${q.limiteTempo > 0 ? q.limiteTempo + 's' : 'Sem limite'}</p>
+                <p><strong>Questões:</strong> ${q.quantidadeQuestoes}</p>
+                ${q.urlVideo ? `<p><a href="${q.urlVideo}" target="_blank" style="color: var(--secondary); font-weight: 600;"><i class="fab fa-youtube"></i> Vídeo Anexado</a></p>` : ''}
+                ${listaQuestoes}
+
+                <div class="stack" style="margin-top: 1.25rem;">
+                    <a href="responder-quiz.html?id=${q.quizzId}" class="botao quiz-botao">
+                        <i class="fas fa-play"></i> Iniciar Quiz
+                    </a>
+                    ${ehAutor ? `
+                        <button class="botao botao-secundario" onclick="editarQuizz(${q.quizzId})"><i class="fas fa-pen"></i> Editar</button>
+                        <button class="botao botao-perigo" onclick="excluirQuizz(${q.quizzId})"><i class="fas fa-trash"></i> Excluir</button>
+                    ` : ''}
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function excluirQuizz(id) {
+            if (!confirm('Deseja excluir este quiz? As questões e as respostas dos alunos vinculadas a ele '
+                + 'serão removidas e a pontuação dos alunos será recalculada.')) return;
+            try {
+                await apiFetch(`/quizzes/${id}`, { method: 'DELETE' });
+                mostrarMensagem('mensagem', 'Quiz excluído com sucesso.', 'success');
+                carregarMeusQuizzes();
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Não foi possível excluir o quiz: ' + err.message, 'error');
+            }
+        }
+
+        async function recalcularPontuacao() {
+            if (!confirm('Recalcular a pontuação de todos os alunos, a dificuldade das questões e os níveis? '
+                + 'Nenhum dado será apagado — apenas recalculado a partir das respostas registradas.')) return;
+            try {
+                const resumo = await apiFetch('/quizzes/tri/recalcular', { method: 'POST' });
+                mostrarMensagem('mensagem', `${resumo.mensagem} Questões processadas: ${resumo.questoesProcessadas}, `
+                    + `recalibradas agora: ${resumo.questoesRecalibradas}, alunos recalculados: ${resumo.alunosRecalculados}.`,
+                    'success');
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Falha ao recalcular: ' + err.message, 'error');
+            }
+        }
+
+        function removerQuestaoFormulario(indice) {
+            const bloco = document.querySelector(`.questao-bloco[data-indice="${indice}"]`);
+            if (bloco) bloco.remove();
+            if (document.querySelectorAll('.questao-bloco').length === 0) {
+                adicionarQuestaoFormulario();
+            }
+        }
+
+        function coletarQuestoesDoFormulario() {
+            const questoes = [];
+            document.querySelectorAll('.questao-bloco').forEach(bloco => {
+                const idExistente = bloco.querySelector('.questao-id').value;
+                const item = {
+                    pergunta: bloco.querySelector('.questao-pergunta').value.trim(),
+                    alternativaA: bloco.querySelector('.questao-alt-A').value.trim(),
+                    alternativaB: bloco.querySelector('.questao-alt-B').value.trim(),
+                    alternativaC: bloco.querySelector('.questao-alt-C').value.trim(),
+                    alternativaD: bloco.querySelector('.questao-alt-D').value.trim(),
+                    alternativaE: bloco.querySelector('.questao-alt-E').value.trim(),
+                    alternativaCorreta: bloco.querySelector('.questao-correta').value,
+                    dificuldade: bloco.querySelector('.questao-dificuldade').value
+                };
+                if (idExistente) item.questaoId = parseInt(idExistente, 10);
+                questoes.push(item);
+            });
+            return questoes;
+        }
+
+        /** Carrega um quiz existente no formulário para edição (preservando os ids das questões). */
+        async function editarQuizz(id) {
+            try {
+                const lista = await apiFetch('/quizzes/my');
+                const quiz = lista.find(q => q.quizzId === id);
+                if (!quiz) throw new Error('Quiz não encontrado entre as suas atividades.');
+
+                limparFormularioQuizz();
+                document.getElementById('editQuizzId').value = quiz.quizzId;
+                document.getElementById('formQuizzTitulo').innerText = 'Editar Atividade / Quiz';
+                document.getElementById('nomeQuizzInput').value = quiz.nomeQuizz;
+                document.getElementById('materiaQuizzInput').value = quiz.materia;
+                document.getElementById('dificuldadeQuizzInput').value = quiz.dificuldadeGeral;
+                document.getElementById('tempoQuizzInput').value = quiz.limiteTempo;
+                document.getElementById('videoQuizzInput').value = quiz.urlVideo || '';
+
+                (quiz.questoes || []).forEach(qq => adicionarQuestaoFormulario(qq));
+                if ((quiz.questoes || []).length === 0) adicionarQuestaoFormulario();
+
+                trocarAbaQuizz('novo');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Não foi possível abrir o quiz para edição: ' + err.message, 'error');
+            }
+        }
+
+        function limparFormularioQuizz() {
+            document.getElementById('quizzForm').reset();
+            document.getElementById('editQuizzId').value = '';
+            document.getElementById('questoesContainer').innerHTML = '';
+            contadorQuestoes = 0;
+            document.getElementById('formQuizzTitulo').innerText = 'Criar Atividade / Quiz Objetivos';
+        }
+
+        function cancelarEdicao() {
+            limparFormularioQuizz();
+            trocarAbaQuizz('meus');
+        }
+
+        /** Adiciona um bloco de questão ao formulário (com dificuldade inicial individual). */
+        function adicionarQuestaoFormulario(questao) {
+            contadorQuestoes++;
+            const id = contadorQuestoes;
+            const q = questao || {};
+            const valor = (campo) => (q[campo] !== undefined && q[campo] !== null ? q[campo] : '');
+            const difInicial = q.dificuldadeInicial || q.dificuldade || 'INTERMEDIARIA';
+
+            const bloco = document.createElement('div');
+            bloco.className = 'questao-bloco';
+            bloco.dataset.indice = id;
+            bloco.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                    <h4>Questão #${id}</h4>
+                    <button type="button" class="botao botao-perigo" onclick="removerQuestaoFormulario(${id})">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                </div>
+                <input type="hidden" class="questao-id" value="${q.questaoId || ''}">
+                <div class="form-group">
+                    <label>Pergunta</label>
+                    <input type="text" class="form-control questao-pergunta" placeholder="Ex: Qual a velocidade média do móvel?" value="${valor('pergunta')}" required>
+                </div>
+                <div class="alternativas-grid">
+                    ${['A', 'B', 'C', 'D', 'E'].map(letra => `
+                        <div class="form-group">
+                            <label>Alternativa ${letra}</label>
+                            <input type="text" class="form-control questao-alt-${letra}" value="${valor('alternativa' + letra)}" required>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Alternativa correta</label>
+                        <select class="form-control questao-correta" required>
+                            ${['A', 'B', 'C', 'D', 'E'].map(letra =>
+                                `<option value="${letra}" ${q.alternativaCorreta === letra ? 'selected' : ''}>${letra}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dificuldade inicial da questão</label>
+                        <select class="form-control questao-dificuldade" required>
+                            <option value="FACIL" ${difInicial === 'FACIL' ? 'selected' : ''}>Fácil (10 pontos)</option>
+                            <option value="INTERMEDIARIA" ${difInicial === 'INTERMEDIARIA' || difInicial === 'MEDIO' ? 'selected' : ''}>Intermediária (50 pontos)</option>
+                            <option value="DIFICIL" ${difInicial === 'DIFICIL' ? 'selected' : ''}>Difícil (100 pontos)</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="hint">Respostas de alunos: <strong>${q.totalRespostas || 0}</strong>
+                   ${q.calibrada ? ' • dificuldade já recalibrada automaticamente' : ' • recalibra após 10 respostas válidas'}</p>
+            `;
+            document.getElementById('questoesContainer').appendChild(bloco);
+        }
+
+        document.getElementById('quizzForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('editQuizzId').value;
+            const payload = {
+                nomeQuizz: document.getElementById('nomeQuizzInput').value.trim(),
+                materia: document.getElementById('materiaQuizzInput').value.trim(),
+                dificuldadeGeral: document.getElementById('dificuldadeQuizzInput').value,
+                limiteTempo: parseInt(document.getElementById('tempoQuizzInput').value, 10),
+                urlVideo: document.getElementById('videoQuizzInput').value.trim() || null,
+                questoes: coletarQuestoesDoFormulario()
+            };
+
+            try {
+                if (editId) {
+                    await apiFetch(`/quizzes/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
+                    mostrarMensagem('mensagem', 'Quiz atualizado com sucesso.', 'success');
+                } else {
+                    await apiFetch('/quizzes', { method: 'POST', body: JSON.stringify(payload) });
+                    mostrarMensagem('mensagem', 'Quiz publicado com sucesso.', 'success');
+                }
+                limparFormularioQuizz();
+                trocarAbaQuizz('meus');
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Não foi possível salvar o quiz: ' + err.message, 'error');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', carregarPerfilEQuizzes);
+    </script>
+</body>
+</html>

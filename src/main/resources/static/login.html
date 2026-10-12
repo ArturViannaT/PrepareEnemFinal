@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+
+    <div class="card" style="width: 100%; max-width: 420px; padding: 2.5rem;">
+        <h1 class="auth-logo" style="margin-bottom: 0.5rem;">
+            <img class="auth-logo-image" src="img/logo.png" alt="Logo Prepare Enem">
+            <span style="color: #16499b;">Prepare</span><span>Enem</span>
+        </h1>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Acesse sua conta para começar os treinos</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label><i class="fas fa-envelope"></i> E-mail</label>
+                <input type="email" id="emailInput" class="form-control" placeholder="seuemail@exemplo.com" required>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Senha</label>
+                <input type="password" id="senhaInput" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="botao" style="width: 100%; margin-top: 0.5rem;">
+                <i class="fas fa-right-to-bracket"></i> Entrar
+            </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">
+            Não tem uma conta? <a href="cadastro.html" style="color: var(--primary); text-decoration: none; font-weight: 600;">Cadastre-se</a>
+        </p>
+        <div id="mensagem" style="margin-top: 1rem; color: #ef4444; font-size: 0.9rem; text-align: center;"></div>
+    </div>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const form = document.getElementById('loginForm');
+        const msg = document.getElementById('mensagem');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.style.color = '#ef4444';
+            msg.innerText = '';
+
+            const email = document.getElementById('emailInput').value.trim().toLowerCase();
+            const password = document.getElementById('senhaInput').value;
+
+            try {
+                const client = getSupabaseClient();
+                if (!client) throw new Error('Cliente Supabase não inicializado');
+
+                // Autentica via Supabase Auth (única fonte de autenticação do sistema)
+                const { data, error } = await client.auth.signInWithPassword({ email, password });
+                if (error) throw new Error(error.message);
+
+                msg.style.color = '#10b981';
+                msg.innerText = 'Login realizado! Carregando seu perfil...';
+
+                // Sincroniza/recupera o perfil da aplicação (define e persiste o papel do usuário)
+                let perfil = null;
+                try {
+                    perfil = await apiFetch('/users/me');
+                } catch (syncErr) {
+                    console.error('Falha ao sincronizar o perfil com o backend:', syncErr);
+                    msg.style.color = '#f59e0b';
+                    msg.innerText = 'Login efetuado, mas o backend não respondeu (' + syncErr.message + '). '
+                        + 'Verifique se a aplicação Spring Boot está em execução.';
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
+                    return;
+                }
+
+                msg.style.color = '#10b981';
+                msg.innerText = `Bem-vindo(a), ${perfil.nome} (${perfil.tipo})! Redirecionando...`;
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 700);
+            } catch (err) {
+                msg.style.color = '#ef4444';
+                msg.innerText = 'Erro ao fazer login: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

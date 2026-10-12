@@ -1,0 +1,278 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare Enem — Minha Conta</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1>Minha Conta</h1>
+            <div class="user-status">
+                <div class="pontos" title="Seus pontos">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Seu nível">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil" id="userAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <div id="mensagem" style="display: none; margin-bottom: 1.25rem;"></div>
+
+        <!-- Dados atuais da conta -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2><i class="fas fa-id-card" style="color: var(--primary); margin-right: 0.5rem;"></i> Meus dados</h2>
+            <div id="dadosConta" style="margin-top: 1rem;">
+                <p>Carregando dados da sua conta...</p>
+            </div>
+        </div>
+
+        <!-- Edição dos dados -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2><i class="fas fa-user-pen" style="color: var(--secondary); margin-right: 0.5rem;"></i> Editar dados</h2>
+            <form id="formConta" style="margin-top: 1rem;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nome completo</label>
+                        <input type="text" id="nomeInput" class="form-control" required minlength="2" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail (gerenciado pelo Supabase Auth)</label>
+                        <input type="email" id="emailInput" class="form-control" disabled>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição / Bio</label>
+                    <textarea id="descricaoInput" class="form-control" rows="3" maxlength="2000"
+                              placeholder="Conte um pouco sobre você (aparece no seu perfil público)."></textarea>
+                </div>
+
+                <div class="form-group" id="grupoInstituicao" style="display: none;">
+                    <label>Instituição de ensino (professor)</label>
+                    <input type="text" id="instituicaoInput" class="form-control" maxlength="255">
+                </div>
+
+                <div class="form-group">
+                    <label>Foto de perfil</label>
+                    <div class="stack">
+                        <span id="previewFoto" class="avatar avatar--lg"></span>
+                        <div style="flex: 1; min-width: 220px;">
+                            <input type="file" id="arquivoFoto" class="form-control" accept="image/png,image/jpeg,image/webp">
+                            <p class="hint">A imagem é enviada para o Supabase Storage (bucket <code>avatars</code>) e a URL
+                               fica salva no seu perfil. Alternativamente, informe uma URL abaixo.</p>
+                        </div>
+                    </div>
+                    <input type="url" id="fotoUrlInput" class="form-control" style="margin-top: 0.75rem;"
+                           placeholder="https://... (opcional)" maxlength="500">
+                </div>
+
+                <div class="stack" style="margin-top: 0.5rem;">
+                    <button type="submit" class="botao" id="btnSalvar"><i class="fas fa-check"></i> Salvar alterações</button>
+                    <button type="button" class="botao botao-secundario" onclick="carregarConta()"><i class="fas fa-rotate"></i> Recarregar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Zona de risco -->
+        <div class="card">
+            <h2><i class="fas fa-triangle-exclamation" style="color: var(--accent-red); margin-right: 0.5rem;"></i> Excluir conta</h2>
+            <p class="hint">Remove permanentemente seus dados na plataforma (perfil, respostas, tentativas, avaliações e,
+               no caso de professor, os conteúdos e quizzes de sua autoria). A conta de login no Supabase Auth não é
+               removida automaticamente.</p>
+            <button class="botao botao-perigo" onclick="excluirConta()"><i class="fas fa-user-slash"></i> Excluir minha conta</button>
+        </div>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        const BUCKET_FOTOS = 'avatars';
+        let usuario = null;
+
+        function definirPreviewFoto(url) {
+            const preview = document.getElementById('previewFoto');
+            if (url) {
+                preview.innerHTML = `<img src="${url}" alt="Prévia da foto de perfil">`;
+            } else {
+                const inicial = usuario && usuario.nome ? usuario.nome.trim().charAt(0) : '?';
+                preview.innerHTML = inicial;
+            }
+        }
+
+        function preencherFormulario(u) {
+            document.getElementById('nomeInput').value = u.nome || '';
+            document.getElementById('emailInput').value = u.email || '';
+            document.getElementById('descricaoInput').value = u.descricao || '';
+            document.getElementById('fotoUrlInput').value = u.fotoPerfil || '';
+
+            const grupo = document.getElementById('grupoInstituicao');
+            if (u.tipo === 'PROFESSOR') {
+                grupo.style.display = 'block';
+                document.getElementById('instituicaoInput').value = u.instituicao || '';
+            } else {
+                grupo.style.display = 'none';
+            }
+            definirPreviewFoto(u.fotoPerfil);
+        }
+
+        /** Envia a foto escolhida para o Supabase Storage e devolve a URL pública. */
+        async function enviarFotoDireta(arquivo) {
+            const client = getSupabaseClient();
+            if (!client) throw new Error('Cliente Supabase não inicializado.');
+
+            const user = await getCurrentUser();
+            if (!user) throw new Error('Sessão do Supabase Auth não encontrada.');
+
+            const extensao = (arquivo.name.split('.').pop() || 'png').toLowerCase();
+            const caminho = `${user.id}/perfil-${Date.now()}.${extensao}`;
+
+            const { error } = await client.storage.from(BUCKET_FOTOS).upload(caminho, arquivo, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: arquivo.type
+            });
+
+            if (error) {
+                throw new Error('Falha no upload da imagem (' + error.message + '). '
+                    + 'Verifique se o bucket "' + BUCKET_FOTOS + '" existe no Supabase Storage e se o usuário tem permissão de escrita.');
+            }
+
+            const { data } = client.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);
+            return data.publicUrl;
+        }
+
+        /** Tenta primeiro o upload via backend (URL assinada restrita à pasta do usuário);
+         * se o Storage não estiver configurado no servidor, usa o upload direto com a
+         * chave pública (regras RLS do bucket "avatars"). */
+        async function enviarFotoPerfil(arquivo) {
+            try {
+                const dados = await apiFetch('/users/me/photo-url', {
+                    method: 'POST',
+                    body: JSON.stringify({ contentType: arquivo.type || 'image/jpeg', tamanhoBytes: arquivo.size })
+                });
+                if (dados && dados.uploadUrl && dados.urlPublica) {
+                    const resposta = await fetch(dados.uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': dados.contentType || arquivo.type || 'image/jpeg' },
+                        body: arquivo
+                    });
+                    if (!resposta.ok) {
+                        throw new Error('Falha no envio da imagem (HTTP ' + resposta.status + ').');
+                    }
+                    return dados.urlPublica;
+                }
+            } catch (err) {
+                console.warn('Upload via backend indisponível, usando upload direto:', err && err.message);
+            }
+            return enviarFotoDireta(arquivo);
+        }
+
+        async function carregarConta() {
+            usuario = await montarLayout();
+            if (!usuario) return;
+
+            const linhas = [
+                `<p><strong>Nome:</strong> ${usuario.nome}</p>`,
+                `<p><strong>E-mail:</strong> ${usuario.email}</p>`,
+                `<p><strong>Tipo de conta:</strong> <span class="badge badge-azul">${usuario.tipo}</span></p>`,
+                `<p><strong>Descrição:</strong> ${usuario.descricao || '<span class="hint">Não informada</span>'}</p>`
+            ];
+
+            if (usuario.tipo === 'ALUNO') {
+                linhas.push(
+                    `<p><strong>Pontuação:</strong> ${Math.round(usuario.pontos || 0)} pts</p>`,
+                    `<p><strong>Nível:</strong> ${usuario.nivel} (próximo nível em ${Math.round(usuario.pontosParaProximoNivel || 0)} pts)</p>`,
+                    `<p><strong>XP:</strong> ${usuario.xp || 0}</p>`,
+                    `<p><strong>Quizzes realizados:</strong> ${usuario.quizzesResolvidos || 0}</p>`,
+                    `<p><strong>Posição no ranking:</strong> ${usuario.posicaoRanking || '-'}º de ${usuario.totalAlunos || '-'}</p>`
+                );
+            } else {
+                linhas.push(
+                    `<p><strong>Instituição:</strong> ${usuario.instituicao || '<span class="hint">Não informada</span>'}</p>`,
+                    `<p><strong>Conteúdos publicados:</strong> ${usuario.totalConteudos || 0}</p>`,
+                    `<p><strong>Quizzes criados:</strong> ${usuario.totalQuizzes || 0}</p>`
+                );
+            }
+
+            linhas.push(`<p><strong>Conta criada em:</strong> ${usuario.createdAt
+                ? new Date(usuario.createdAt).toLocaleString('pt-BR') : '-'}</p>`);
+
+            document.getElementById('dadosConta').innerHTML = linhas.join('');
+            preencherFormulario(usuario);
+        }
+
+        document.getElementById('arquivoFoto').addEventListener('change', (e) => {
+            const arquivo = e.target.files && e.target.files[0];
+            if (arquivo) definirPreviewFoto(URL.createObjectURL(arquivo));
+        });
+
+        document.getElementById('formConta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const botao = document.getElementById('btnSalvar');
+            botao.disabled = true;
+            botao.innerHTML = '<span class="spinner spinner-white"></span> Salvando...';
+
+            try {
+                let fotoUrl = document.getElementById('fotoUrlInput').value.trim();
+                const arquivo = document.getElementById('arquivoFoto').files[0];
+
+                if (arquivo) {
+                    mostrarMensagem('mensagem', 'Enviando foto de perfil para o Supabase Storage...', 'warning');
+                    fotoUrl = await enviarFotoPerfil(arquivo);
+                }
+
+                const atualizado = await apiFetch('/users/me', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        nome: document.getElementById('nomeInput').value.trim(),
+                        descricao: document.getElementById('descricaoInput').value.trim(),
+                        instituicao: document.getElementById('instituicaoInput').value.trim(),
+                        fotoPerfil: fotoUrl
+                    })
+                });
+
+                usuario = atualizado;
+                document.getElementById('arquivoFoto').value = '';
+                mostrarMensagem('mensagem', 'Dados atualizados com sucesso!', 'success');
+                await carregarConta();
+            } catch (err) {
+                console.error('Erro ao salvar os dados da conta:', err);
+                mostrarMensagem('mensagem', 'Não foi possível salvar os dados: ' + err.message, 'error');
+            } finally {
+                botao.disabled = false;
+                botao.innerHTML = '<i class="fas fa-check"></i> Salvar alterações';
+            }
+        });
+
+        async function excluirConta() {
+            if (!confirm('ATENÇÃO: isso remove definitivamente seus dados na plataforma. Deseja continuar?')) return;
+            try {
+                const resposta = await apiFetch('/users/me', { method: 'DELETE' });
+                alert(resposta.mensagem || 'Conta excluída com sucesso.');
+                await fazerLogoutSupabase();
+            } catch (err) {
+                mostrarMensagem('mensagem', 'Não foi possível excluir a conta: ' + err.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarConta);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,438 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.atividadeAvaliativaLP3:demo >-------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.1:run (default-cli) > test-compile @ demo >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ demo ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 18 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ demo ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ demo ---
+[INFO] skip non existing resourceDirectory C:\Users\artur\Downloads\PrepareEnemFinal\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ demo ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 3 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] /C:/Users/artur/Downloads/PrepareEnemFinal/src/test/java/com/atividadeAvaliativaLP3/demo/ModelIntegrityTest.java: C:\Users\artur\Downloads\PrepareEnemFinal\src\test\java\com\atividadeAvaliativaLP3\demo\ModelIntegrityTest.java uses or overrides a deprecated API.
+[INFO] /C:/Users/artur/Downloads/PrepareEnemFinal/src/test/java/com/atividadeAvaliativaLP3/demo/ModelIntegrityTest.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] <<< spring-boot:3.3.1:run (default-cli) < test-compile @ demo <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.1:run (default-cli) @ demo ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.1)
+
+2026-10-03T14:34:52.503-03:00  INFO 8760 --- [           main] c.a.demo.PrepareEnemApplication          : Starting PrepareEnemApplication using Java 17.0.5 with PID 8760 (C:\Users\artur\Downloads\PrepareEnemFinal\target\classes started by artur in C:\Users\artur\Downloads\PrepareEnemFinal)
+2026-10-03T14:34:52.512-03:00  INFO 8760 --- [           main] c.a.demo.PrepareEnemApplication          : No active profile set, falling back to 1 default profile: "default"
+2026-10-03T14:34:55.346-03:00  INFO 8760 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-03T14:34:55.842-03:00  INFO 8760 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 477 ms. Found 10 JPA repository interfaces.
+2026-10-03T14:34:57.571-03:00  INFO 8760 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-03T14:34:57.601-03:00  INFO 8760 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-03T14:34:57.602-03:00  INFO 8760 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.25]
+2026-10-03T14:34:57.797-03:00  INFO 8760 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-03T14:34:57.800-03:00  INFO 8760 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5070 ms
+2026-10-03T14:34:58.196-03:00  INFO 8760 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-03T14:34:58.341-03:00  INFO 8760 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.2.Final
+2026-10-03T14:34:58.426-03:00  INFO 8760 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-03T14:34:59.388-03:00  INFO 8760 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-03T14:34:59.624-03:00  WARN 8760 --- [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-10-03T14:35:03.224-03:00  INFO 8760 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-03T14:35:03.229-03:00  INFO 8760 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-03T14:35:04.609-03:00  INFO 8760 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-03T14:35:05.300-03:00  WARN 8760 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-03T14:35:05.628-03:00  INFO 8760 --- [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-10-03T14:35:07.162-03:00  INFO 8760 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-10-03T14:35:07.183-03:00  INFO 8760 --- [           main] c.a.demo.PrepareEnemApplication          : Started PrepareEnemApplication in 20.362 seconds (process running for 23.603)
+2026-10-03T14:35:07.194-03:00  INFO 8760 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-03T14:35:07.223-03:00  INFO 8760 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-03T14:35:07.832-03:00  INFO 8760 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-03T14:35:07.833-03:00  INFO 8760 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-03T14:35:07.836-03:00  INFO 8760 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-10-03T14:35:08.246-03:00 DEBUG 8760 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        a1_0.usuario_id,
+        a1_1.auth_id,
+        a1_1.created_at,
+        a1_1.descricao,
+        a1_1.email,
+        a1_1.foto_perfil,
+        a1_1.nome,
+        a1_0.nivel,
+        a1_0.pontos,
+        a1_0.quizzes_resolvidos,
+        a1_0.xp 
+    from
+        aluno a1_0 
+    join
+        usuario a1_1 
+            on a1_0.usuario_id=a1_1.id 
+    order by
+        a1_0.pontos desc
+Hibernate: 
+    select
+        a1_0.usuario_id,
+        a1_1.auth_id,
+        a1_1.created_at,
+        a1_1.descricao,
+        a1_1.email,
+        a1_1.foto_perfil,
+        a1_1.nome,
+        a1_0.nivel,
+        a1_0.pontos,
+        a1_0.quizzes_resolvidos,
+        a1_0.xp 
+    from
+        aluno a1_0 
+    join
+        usuario a1_1 
+            on a1_0.usuario_id=a1_1.id 
+    order by
+        a1_0.pontos desc
+2026-10-03T14:35:08.806-03:00  INFO 8760 --- [           main] c.a.demo.config.EstruturaBancoConfig     : Estrutura do banco verificada: 7/7 comandos idempotentes aplicados com sucesso.
+2026-10-03T14:35:08.839-03:00 DEBUG 8760 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        q1_0.quizz_id,
+        q1_0.autor_id,
+        q1_0.dificuldade_geral,
+        q1_0.limite_tempo,
+        q1_0.materia,
+        q1_0.nome_quizz,
+        q1_0.recompensa_pontos,
+        q1_0.url_video 
+    from
+        quizz q1_0
+Hibernate: 
+    select
+        q1_0.quizz_id,
+        q1_0.autor_id,
+        q1_0.dificuldade_geral,
+        q1_0.limite_tempo,
+        q1_0.materia,
+        q1_0.nome_quizz,
+        q1_0.recompensa_pontos,
+        q1_0.url_video 
+    from
+        quizz q1_0
+2026-10-03T14:35:08.886-03:00 DEBUG 8760 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        case 
+            when u1_1.usuario_id is not null 
+                then 1 
+            when u1_2.usuario_id is not null 
+                then 2 
+            when u1_0.id is not null 
+                then 0 
+        end,
+        u1_0.auth_id,
+        u1_0.created_at,
+        u1_0.descricao,
+        u1_0.email,
+        u1_0.foto_perfil,
+        u1_0.nome,
+        u1_1.nivel,
+        u1_1.pontos,
+        u1_1.quizzes_resolvidos,
+        u1_1.xp,
+        u1_2.instituicao 
+    from
+        usuario u1_0 
+    left join
+        aluno u1_1 
+            on u1_0.id=u1_1.usuario_id 
+    left join
+        professor u1_2 
+            on u1_0.id=u1_2.usuario_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        case 
+            when u1_1.usuario_id is not null 
+                then 1 
+            when u1_2.usuario_id is not null 
+                then 2 
+            when u1_0.id is not null 
+                then 0 
+        end,
+        u1_0.auth_id,
+        u1_0.created_at,
+        u1_0.descricao,
+        u1_0.email,
+        u1_0.foto_perfil,
+        u1_0.nome,
+        u1_1.nivel,
+        u1_1.pontos,
+        u1_1.quizzes_resolvidos,
+        u1_1.xp,
+        u1_2.instituicao 
+    from
+        usuario u1_0 
+    left join
+        aluno u1_1 
+            on u1_0.id=u1_1.usuario_id 
+    left join
+        professor u1_2 
+            on u1_0.id=u1_2.usuario_id 
+    where
+        u1_0.id=?
+2026-10-03T14:35:08.972-03:00  INFO 8760 --- [           main] c.a.d.config.VisualizacoesBancoConfig    : Views de apoio do banco verificadas: 5/5 (vw_usuario_completo, vw_aluno_completo, vw_professor_completo, vw_questao_desempenho, vw_resposta_detalhada)
+2026-10-03T14:35:08.977-03:00 DEBUG 8760 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        q1_0.questao_id,
+        q1_0.alternativa_a,
+        q1_0.alternativa_b,
+        q1_0.alternativa_c,
+        q1_0.alternativa_correta,
+        q1_0.alternativa_d,
+        q1_0.alternativa_e,
+        q1_0.calibrada,
+        q1_0.calibrada_em,
+        q1_0.dificuldade_atual,
+        q1_0.dificuldade_inicial,
+        q1_0.percentual_acertos,
+        q1_0.pergunta,
+        q1_0.quizz_id,
+        q1_0.tempo_medio,
+        q1_0.total_acertos,
+        q1_0.total_respostas 
+    from
+        questao q1_0 
+    where
+        q1_0.quizz_id=?
+Hibernate: 
+    select
+        q1_0.questao_id,
+        q1_0.alternativa_a,
+        q1_0.alternativa_b,
+        q1_0.alternativa_c,
+        q1_0.alternativa_correta,
+        q1_0.alternativa_d,
+        q1_0.alternativa_e,
+        q1_0.calibrada,
+        q1_0.calibrada_em,
+        q1_0.dificuldade_atual,
+        q1_0.dificuldade_inicial,
+        q1_0.percentual_acertos,
+        q1_0.pergunta,
+        q1_0.quizz_id,
+        q1_0.tempo_medio,
+        q1_0.total_acertos,
+        q1_0.total_respostas 
+    from
+        questao q1_0 
+    where
+        q1_0.quizz_id=?
+2026-10-03T14:35:09.030-03:00 DEBUG 8760 --- [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        q1_0.questao_id,
+        q1_0.alternativa_a,
+        q1_0.alternativa_b,
+        q1_0.alternativa_c,
+        q1_0.alternativa_correta,
+        q1_0.alternativa_d,
+        q1_0.alternativa_e,
+        q1_0.calibrada,
+        q1_0.calibrada_em,
+        q1_0.dificuldade_atual,
+        q1_0.dificuldade_inicial,
+        q1_0.percentual_acertos,
+        q1_0.pergunta,
+        q1_0.quizz_id,
+        q1_0.tempo_medio,
+        q1_0.total_acertos,
+        q1_0.total_respostas 
+    from
+        questao q1_0 
+    where
+        q1_0.quizz_id=?
+Hibernate: 
+    select
+        q1_0.questao_id,
+        q1_0.alternativa_a,
+        q1_0.alternativa_b,
+        q1_0.alternativa_c,
+        q1_0.alternativa_correta,
+        q1_0.alternativa_d,
+        q1_0.alternativa_e,
+        q1_0.calibrada,
+        q1_0.calibrada_em,
+        q1_0.dificuldade_atual,
+        q1_0.dificuldade_inicial,
+        q1_0.percentual_acertos,
+        q1_0.pergunta,
+        q1_0.quizz_id,
+        q1_0.tempo_medio,
+        q1_0.total_acertos,
+        q1_0.total_respostas 
+    from
+        questao q1_0 
+    where
+        q1_0.quizz_id=?
+2026-10-03T14:35:09.112-03:00 DEBUG 8760 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        c1_0.conteudo_id,
+        c1_0.autor_id,
+        c1_0.materia,
+        c1_0.texto,
+        c1_0.titulo,
+        c1_0.url_video,
+        c1_0.visibilidade 
+    from
+        conteudo c1_0 
+    where
+        c1_0.visibilidade=?
+Hibernate: 
+    select
+        c1_0.conteudo_id,
+        c1_0.autor_id,
+        c1_0.materia,
+        c1_0.texto,
+        c1_0.titulo,
+        c1_0.url_video,
+        c1_0.visibilidade 
+    from
+        conteudo c1_0 
+    where
+        c1_0.visibilidade=?
+2026-10-03T14:35:09.145-03:00 DEBUG 8760 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        case 
+            when u1_1.usuario_id is not null 
+                then 1 
+            when u1_2.usuario_id is not null 
+                then 2 
+            when u1_0.id is not null 
+                then 0 
+        end,
+        u1_0.auth_id,
+        u1_0.created_at,
+        u1_0.descricao,
+        u1_0.email,
+        u1_0.foto_perfil,
+        u1_0.nome,
+        u1_1.nivel,
+        u1_1.pontos,
+        u1_1.quizzes_resolvidos,
+        u1_1.xp,
+        u1_2.instituicao 
+    from
+        usuario u1_0 
+    left join
+        aluno u1_1 
+            on u1_0.id=u1_1.usuario_id 
+    left join
+        professor u1_2 
+            on u1_0.id=u1_2.usuario_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        case 
+            when u1_1.usuario_id is not null 
+                then 1 
+            when u1_2.usuario_id is not null 
+                then 2 
+            when u1_0.id is not null 
+                then 0 
+        end,
+        u1_0.auth_id,
+        u1_0.created_at,
+        u1_0.descricao,
+        u1_0.email,
+        u1_0.foto_perfil,
+        u1_0.nome,
+        u1_1.nivel,
+        u1_1.pontos,
+        u1_1.quizzes_resolvidos,
+        u1_1.xp,
+        u1_2.instituicao 
+    from
+        usuario u1_0 
+    left join
+        aluno u1_1 
+            on u1_0.id=u1_1.usuario_id 
+    left join
+        professor u1_2 
+            on u1_0.id=u1_2.usuario_id 
+    where
+        u1_0.id=?
+2026-10-03T14:35:09.177-03:00 DEBUG 8760 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        ac1_0.avaliacao_id,
+        ac1_0.conteudo_id,
+        ac1_0.estrelas,
+        ac1_0.usuario_id 
+    from
+        avaliacao_conteudo ac1_0 
+    where
+        ac1_0.conteudo_id=?
+Hibernate: 
+    select
+        ac1_0.avaliacao_id,
+        ac1_0.conteudo_id,
+        ac1_0.estrelas,
+        ac1_0.usuario_id 
+    from
+        avaliacao_conteudo ac1_0 
+    where
+        ac1_0.conteudo_id=?
+2026-10-03T14:35:09.210-03:00 DEBUG 8760 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        ac1_0.avaliacao_id,
+        ac1_0.conteudo_id,
+        ac1_0.estrelas,
+        ac1_0.usuario_id 
+    from
+        avaliacao_conteudo ac1_0 
+    where
+        ac1_0.conteudo_id=?
+Hibernate: 
+    select
+        ac1_0.avaliacao_id,
+        ac1_0.conteudo_id,
+        ac1_0.estrelas,
+        ac1_0.usuario_id 
+    from
+        avaliacao_conteudo ac1_0 
+    where
+        ac1_0.conteudo_id=?
+2026-10-03T19:34:01.639-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2h8m20s487ms199탎900ns).
+2026-10-04T19:27:02.757-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=21h38m58s40ms249탎).
+2026-10-06T12:24:24.773-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1d14h32m47s236ms958탎400ns).
+2026-10-06T17:33:52.783-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4h39m24s925ms954탎300ns).
+2026-10-06T19:46:36.255-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h29m42s718ms220탎900ns).
+2026-10-08T06:09:25.035-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1d8h18m15s736ms583탎500ns).
+2026-10-09T09:19:15.724-03:00  WARN 8760 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1d3h9m51s2ms235탎900ns).
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5 d 18:58 h
+[INFO] Finished at: 2026-10-09T09:33:18-03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.3.1:run (default-cli) on project demo: Process terminated with exit code: 1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

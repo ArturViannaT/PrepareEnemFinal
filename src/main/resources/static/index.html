@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare Enem — Início</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+
+    <div class="card" style="width: 100%; max-width: 420px; padding: 2.5rem; text-align: center;">
+        <h1 class="auth-logo" style="margin-bottom: 0.75rem;">
+            <img class="auth-logo-image" src="img/logo.png" alt="Logo Prepare Enem">
+            <span style="color: #16499b;">Prepare</span><span>Enem</span>
+        </h1>
+        <p class="hint" id="mensagem">Verificando sua sessão...</p>
+        <div class="stack" style="justify-content: center; margin-top: 1rem;">
+            <span class="spinner"></span>
+        </div>
+    </div>
+
+    <script src="js/supabase.js"></script>
+    <script>
+        // Página inicial: encaminha para o dashboard (logado) ou para o login.
+        document.addEventListener('DOMContentLoaded', async () => {
+            const mensagem = document.getElementById('mensagem');
+            try {
+                const session = await getCurrentSession();
+                if (session) {
+                    mensagem.textContent = 'Sessão encontrada. Abrindo o painel...';
+                    window.location.href = 'dashboard.html';
+                } else {
+                    mensagem.textContent = 'Você ainda não está autenticado. Abrindo o login...';
+                    window.location.href = 'login.html';
+                }
+            } catch (err) {
+                console.error('Falha ao verificar a sessão:', err);
+                mensagem.textContent = 'Não foi possível verificar a sessão. Abrindo o login...';
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
+</body>
+</html>

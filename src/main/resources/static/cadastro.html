@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Cadastro</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem 0;">
+
+    <div class="card" style="width: 100%; max-width: 480px; padding: 2.5rem;">
+        <h1 class="auth-logo" style="margin-bottom: 0.75rem;">
+            <img class="auth-logo-image" src="img/logo.png" alt="Logo Prepare Enem">
+            <span style="color: #16499b;">Prepare</span><span>Enem</span>
+        </h1>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Crie sua conta para começar a estudar</p>
+
+        <form id="cadastroForm">
+            <div class="form-group">
+                <label><i class="fas fa-user-tag"></i> Tipo de Perfil</label>
+                <select id="tipoInput" class="form-control" required>
+                    <option value="ALUNO">Aluno (e-mail acadêmico)</option>
+                    <option value="PROFESSOR">Professor (e-mail institucional)</option>
+                </select>
+                <p class="hint">O papel escolhido é validado pelo domínio do e-mail e gravado no seu perfil
+                   (a senha e o login são gerenciados pelo Supabase Auth).</p>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Nome Completo</label>
+                <input type="text" id="nomeInput" class="form-control" placeholder="Seu nome completo" required>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-envelope"></i> E-mail</label>
+                <input type="email" id="emailInput" class="form-control" placeholder="seuemail@exemplo.com" required>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Senha</label>
+                <input type="password" id="senhaInput" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
+            </div>
+            <button type="submit" class="botao" style="width: 100%; margin-top: 0.5rem;">
+                <i class="fas fa-user-plus"></i> Criar Conta
+            </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">
+            Já possui uma conta? <a href="login.html" style="color: var(--primary); text-decoration: none; font-weight: 600;">Faça Login</a>
+        </p>
+        <div id="mensagem" style="margin-top: 1rem; font-size: 0.9rem; text-align: center;"></div>
+    </div>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const form = document.getElementById('cadastroForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const msg = document.getElementById('mensagem');
+
+        /**
+         * Valida a força da senha
+         */
+        function validatePassword(password) {
+            if (password.length < 6) {
+                return { valid: false, message: 'Senha deve ter no mínimo 6 caracteres' };
+            }
+            if (!/\d/.test(password)) {
+                return { valid: false, message: 'Senha deve conter pelo menos um número' };
+            }
+            return { valid: true };
+        }
+
+        /**
+         * Valida o e-mail
+         */
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        /**
+         * Mostra mensagem de erro
+         */
+        function showError(message) {
+            msg.style.color = '#ef4444';
+            msg.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+            msg.style.display = 'block';
+        }
+
+        /**
+         * Mostra mensagem de sucesso
+         */
+        function showSuccess(message) {
+            msg.style.color = '#39c58c';
+            msg.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            msg.style.display = 'block';
+        }
+
+        /**
+         * Desabilita/habilita o formulário
+         */
+        function setFormDisabled(disabled) {
+            form.querySelectorAll('input, select, button').forEach(el => {
+                el.disabled = disabled;
+            });
+            if (disabled) {
+                submitBtn.innerHTML = '<span style="display: inline-block; width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.5rem;"></span> Criando conta...';
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Criar Conta';
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.style.display = 'none';
+            msg.innerHTML = '';
+
+            const tipo = document.getElementById('tipoInput').value;
+            const nome = document.getElementById('nomeInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim().toLowerCase();
+            const password = document.getElementById('senhaInput').value;
+
+            try {
+                // Validações no cliente
+                if (!nome) {
+                    throw new Error('Por favor, insira seu nome completo');
+                }
+
+                if (!validateEmail(email)) {
+                    throw new Error('Por favor, insira um e-mail válido');
+                }
+
+                const passwordValidation = validatePassword(password);
+                if (!passwordValidation.valid) {
+                    throw new Error(passwordValidation.message);
+                }
+
+                setFormDisabled(true);
+                showSuccess('Validando informações...');
+
+                const client = getSupabaseClient();
+
+                if (!client) {
+                    throw new Error('Falha ao conectar ao serviço de autenticação');
+                }
+
+                // Verificar se a conta já existe no banco de dados
+                let emailAlreadyExists = false;
+                try {
+                    const existingUser = await apiFetch('/users/check-email', {
+                        method: 'POST',
+                        body: JSON.stringify({ email })
+                    });
+
+                    if (existingUser && existingUser.exists) {
+                        emailAlreadyExists = true;
+                        throw new Error('Este e-mail já está registrado no IFSUL. Faça login com suas credenciais ou use outro e-mail.');
+                    }
+                } catch (checkErr) {
+                    // Se o erro é sobre e-mail duplicado, relança
+                    if (checkErr.message.includes('registrado')) {
+                        throw checkErr;
+                    }
+                    // Se for erro de conexão com a API, continua com o signup
+                    console.warn('Aviso: Não foi possível verificar e-mail pré-existente:', checkErr.message);
+                }
+
+                showSuccess('Registrando conta...');
+
+                // Configurar redirecionamento de e-mail de confirmação
+                const emailRedirectTo = `${window.location.origin}/email-confirmado.html`;
+
+                const { data, error } = await client.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: emailRedirectTo,
+                        data: {
+                            tipo: tipo,
+                            nome: nome
+                        }
+                    }
+                });
+
+                if (error) {
+                    // Tratamento específico de erros do Supabase
+                    const friendlyMessage = getAuthErrorMessage(error);
+                    throw new Error(friendlyMessage);
+                }
+
+                if (!data || !data.user) {
+                    throw new Error('Falha ao criar conta. Tente novamente.');
+                }
+
+                showSuccess('Conta registrada! Sincronizando perfil...');
+
+                // Sincronizar perfil com o backend
+                try {
+                    await apiFetch('/users/sync', {
+                        method: 'POST',
+                        body: JSON.stringify({ tipo, nome, email })
+                    });
+                } catch (syncErr) {
+                    console.warn('Aviso: Perfil não sincronizado totalmente:', syncErr.message);
+                    // Continua mesmo se sincronização falhar - o e-mail de confirmação foi enviado
+                }
+
+                showSuccess('Cadastro concluído! Verifique seu e-mail para confirmar a conta.');
+                
+                // Aguardar 3 segundos antes de redirecionar
+                setTimeout(() => {
+                    window.location.href = 'email-confirmado.html';
+                }, 3000);
+
+            } catch (err) {
+                console.error('Erro no cadastro:', err);
+                showError(err.message || 'Erro ao criar conta. Tente novamente.');
+                setFormDisabled(false);
+            }
+        });
+
+        // Validação em tempo real da senha
+        document.getElementById('senhaInput').addEventListener('input', (e) => {
+            const validation = validatePassword(e.target.value);
+            if (!validation.valid && e.target.value.length > 0) {
+                e.target.style.borderColor = '#fca5a5';
+            } else {
+                e.target.style.borderColor = '';
+            }
+        });
+    </script>
+</body>
+</html>

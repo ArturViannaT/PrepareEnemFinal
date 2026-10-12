@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — E-mail Confirmado</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #f8fafb;
+        }
+
+        .success-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 5rem;
+            height: 5rem;
+            background: linear-gradient(135deg, #39c58c 0%, #2ab57b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(57, 197, 140, 0.3);
+            animation: scaleIn 0.6s ease-out;
+        }
+
+        .loading-icon {
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 3px solid rgba(57, 197, 140, 0.2);
+            border-top-color: #39c58c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-content h1 {
+            font-size: 1.75rem;
+            color: #16499b;
+            margin: 0;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .success-content p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 380px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-login {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .btn-login:hover:not(:disabled) {
+            background: #2ab57b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(57, 197, 140, 0.3);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            color: #39c58c;
+            font-weight: 600;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            display: none;
+            text-align: left;
+            border-left: 4px solid #ef4444;
+            animation: slideDown 0.3s ease-out;
+            margin-bottom: 1rem;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .error-message i {
+            margin-right: 0.5rem;
+        }
+
+        .secondary-link {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-top: 1rem;
+            transition: color 0.2s ease;
+        }
+
+        .secondary-link:hover {
+            color: var(--primary);
+        }
+
+        .info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: #ecfdf5;
+            border-radius: var(--radius);
+            color: #39c58c;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-badge i {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem 0;">
+
+    <div class="card" style="width: 100%; max-width: 480px; padding: 2.5rem;">
+        <h1 class="auth-logo" style="margin-bottom: 2rem;">
+            <img class="auth-logo-image" src="img/logo.png" alt="Logo Prepare Enem">
+            <span style="color: #16499b;">Prepare</span><span>Enem</span>
+        </h1>
+
+        <div class="success-container">
+            <!-- Estado de Carregamento -->
+            <div id="loadingState" style="display: none;">
+                <div class="loading-icon">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div class="success-content">
+                    <h1>Processando confirmação...</h1>
+                    <p id="loadingText">Aguarde enquanto validamos seu e-mail</p>
+                </div>
+            </div>
+
+            <!-- Estado de Sucesso -->
+            <div id="successState" style="display: none;">
+                <div class="info-badge" id="infoBadge" style="display: none;">
+                    <i class="fas fa-badge-check"></i>
+                    <span>E-mail Confirmado com Sucesso!</span>
+                </div>
+                <div class="success-icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="success-content">
+                    <h1>E-mail confirmado com sucesso!</h1>
+                    <p>Sua conta institucional do IFSUL foi ativada. Agora você pode acessar a plataforma e começar seus estudos.</p>
+                </div>
+                <div class="button-container">
+                    <button id="irLoginBtn" class="btn-login">
+                        <i class="fas fa-right-to-bracket"></i>
+                        <span>Ir para o Login</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Estado de Erro -->
+            <div id="errorState" style="display: none;">
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-content" style="margin-top: 1rem;">
+                    <h1 style="color: #ef4444;">Erro ao confirmar</h1>
+                    <p id="errorDescription"></p>
+                </div>
+                <div class="button-container">
+                    <button id="irLoginBtnError" class="btn-login" style="background: #ef4444;">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Voltar ao Login</span>
+                    </button>
+                    <a href="cadastro.html" class="secondary-link">
+                        Criar nova conta
+                    </a>
+                </div>
+            </div>
+
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script src="js/supabase.js"></script>
+    <script>
+        /**
+         * Estados da página de confirmação
+         */
+        const STATES = {
+            LOADING: 'loading',
+            SUCCESS: 'success',
+            ERROR: 'error'
+        };
+
+        let currentState = STATES.LOADING;
+
+        /**
+         * Muda o estado da página
+         */
+        function setState(newState) {
+            currentState = newState;
+            document.getElementById('loadingState').style.display = newState === STATES.LOADING ? 'flex' : 'none';
+            document.getElementById('successState').style.display = newState === STATES.SUCCESS ? 'flex' : 'none';
+            document.getElementById('errorState').style.display = newState === STATES.ERROR ? 'flex' : 'none';
+        }
+
+        /**
+         * Mostra mensagem de erro
+         */
+        function showError(title, description, errorDetails = null) {
+            document.getElementById('errorDescription').textContent = description;
+            
+            const errorMessageDiv = document.getElementById('errorMessage');
+            if (errorDetails) {
+                errorMessageDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${errorDetails}</span>
+                `;
+                errorMessageDiv.classList.add('show');
+            }
+            
+            setState(STATES.ERROR);
+        }
+
+        /**
+         * Mostra sucesso e configura redirecionamento
+         */
+        function showSuccess(userEmail = null) {
+            document.getElementById('infoBadge').style.display = 'inline-flex';
+            setState(STATES.SUCCESS);
+            
+            if (userEmail) {
+                document.querySelector('.success-content p').textContent = 
+                    `Sua conta institucional do IFSUL foi ativada em ${userEmail}. Agora você pode acessar a plataforma e começar seus estudos.`;
+            }
+        }
+
+        /**
+         * Processa a confirmação de e-mail
+         * Extrai token da URL e valida sessão com Supabase
+         */
+        async function processEmailConfirmation() {
+            try {
+                // Mostrar estado de carregamento
+                setState(STATES.LOADING);
+                document.getElementById('loadingText').textContent = 'Aguarde enquanto validamos seu e-mail...';
+
+                // Obter cliente Supabase
+                const client = getSupabaseClient();
+                
+                if (!client) {
+                    throw new Error('Falha ao inicializar Supabase');
+                }
+
+                // Extrair parâmetros da URL
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                const type = hashParams.get('type');
+                const errorCode = hashParams.get('error');
+                const errorDescription = hashParams.get('error_description');
+
+                console.log('URL Params:', { type, accessToken: accessToken ? 'present' : 'missing', errorCode });
+
+                // Verificar se há erro na URL
+                if (errorCode) {
+                    const errorMsg = decodeURIComponent(errorDescription || 'Erro desconhecido');
+                    console.error('Erro no callback:', errorCode, errorMsg);
+                    
+                    showError(
+                        'Erro na Confirmação',
+                        'Não foi possível confirmar seu e-mail. Por favor, tente novamente ou crie uma nova conta.',
+                        `Erro: ${errorCode} - ${errorMsg}`
+                    );
+                    return;
+                }
+
+                // Aguardar para garantir que Supabase processou o token
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // Verificar se há sessão ativa após processamento
+                const { data: { session }, error: sessionError } = await client.auth.getSession();
+
+                if (sessionError) {
+                    console.error('Erro ao obter sessão:', sessionError);
+                    throw new Error('Erro ao processar token de confirmação');
+                }
+
+                if (!session) {
+                    // Sem sessão - pode ser que o usuário tenha clicado sem token
+                    // ou o token tenha expirado
+                    if (!accessToken && !window.location.hash) {
+                        throw new Error('Nenhuma confirmação de e-mail detectada. Por favor, clique no link enviado para seu e-mail.');
+                    }
+                    
+                    // Teve token mas sessão não foi estabelecida
+                    throw new Error('Token inválido ou expirado. Por favor, solicite um novo e-mail de confirmação.');
+                }
+
+                // ✅ Sucesso! E-mail confirmado e sessão estabelecida
+                console.log('✓ E-mail confirmado com sucesso:', session.user.email);
+                showSuccess(session.user.email);
+
+                // Auto-logout após 3 segundos para que usuário faça login
+                setTimeout(async () => {
+                    try {
+                        await client.auth.signOut();
+                        window.location.href = 'login.html';
+                    } catch (logoutErr) {
+                        console.warn('Erro ao fazer logout automático:', logoutErr);
+                        // Mesmo com erro, redireciona
+                        window.location.href = 'login.html';
+                    }
+                }, 3000);
+
+            } catch (err) {
+                console.error('❌ Erro na confirmação:', err);
+                showError(
+                    'Erro ao Confirmar E-mail',
+                    err.message || 'Ocorreu um erro inesperado. Por favor, tente novamente.',
+                    null
+                );
+            }
+        }
+
+        /**
+         * Configura listeners de autenticação
+         */
+        function setupAuthListener() {
+            const client = getSupabaseClient();
+            
+            if (!client) return;
+
+            client.auth.onAuthStateChange((event, session) => {
+                console.log('Auth state changed:', event, session?.user?.email);
+                
+                if (event === 'SIGNED_IN') {
+                    console.log('✓ Usuário autenticado:', session.user.email);
+                } else if (event === 'SIGNED_OUT') {
+                    console.log('ℹ Usuário desautenticado');
+                }
+            });
+        }
+
+        /**
+         * Inicializa a página
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Aguardar Supabase ser inicializado
+                let retries = 0;
+                while (!window.supabase && retries < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    retries++;
+                }
+
+                if (!window.supabase) {
+                    throw new Error('Supabase não pôde ser carregado');
+                }
+
+                setupAuthListener();
+                processEmailConfirmation();
+
+            } catch (err) {
+                console.error('Erro ao inicializar:', err);
+                document.getElementById('loadingText').textContent = 'Erro ao inicializar a página';
+            }
+        });
+
+        // Configurar botões
+        document.addEventListener('DOMContentLoaded', () => {
+            // Botão de login após sucesso
+            document.getElementById('irLoginBtn')?.addEventListener('click', async () => {
+                const btn = document.getElementById('irLoginBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading-spinner"></span> <span>Redirecionando...</span>';
+                
+                try {
+                    const client = getSupabaseClient();
+                    await client.auth.signOut();
+                } catch (err) {
+                    console.warn('Erro no logout:', err);
+                }
+                
+                window.location.href = 'login.html';
+            });
+
+            // Botão de erro
+            document.getElementById('irLoginBtnError')?.addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Perfil & Ranking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <h1>Ranking de Alunos</h1>
+
+            <div class="user-status">
+                <div class="pontos" title="Seus pontos">
+                    <i class="fas fa-star" style="color: gold;"></i> <span id="userPoints">0 pts</span>
+                </div>
+                <div class="sequencia" title="Seu nível">
+                    <i class="fas fa-fire" style="color: #ff7675;"></i> <span id="userLevel">Nível 1</span>
+                </div>
+                <div class="fotoperfil">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <div id="mensagem" style="display: none; margin-bottom: 1rem;"></div>
+
+        <!-- Ranking Geral de Alunos -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2><i class="fas fa-trophy" style="color: gold; margin-right: 0.5rem;"></i> Ranking Geral de Alunos</h2>
+            <p>Alunos ordenados pela pontuação total atual na plataforma. Clique no nome para abrir o perfil público.</p>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Posição</th>
+                            <th>Aluno</th>
+                            <th>Nível</th>
+                            <th>Quizzes</th>
+                            <th>Pontuação Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody">
+                        <tr><td colspan="5">Carregando ranking...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="hint">Para editar seus próprios dados, acesse <a href="minha-conta.html" style="color: var(--secondary); font-weight: 600;">Minha Conta</a>.</p>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        document.body.dataset.layoutManual = '1';
+
+        async function carregarRanking() {
+            const me = await montarLayout();
+            if (!me) return;
+
+            try {
+                const ranking = await apiFetch('/users/ranking');
+                const tbody = document.getElementById('rankingTableBody');
+                tbody.innerHTML = '';
+
+                if (ranking.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">Nenhum aluno pontuou ainda.</td></tr>';
+                    return;
+                }
+
+                ranking.forEach(r => {
+                    const destaque = (me.tipo === 'ALUNO' && me.id === r.id)
+                        ? ' style="background: #f4fbf8;"' : '';
+                    const iniciais = (r.nome || '?').trim().charAt(0).toUpperCase();
+                    const avatar = r.fotoPerfil
+                        ? `<span class="avatar avatar--sm"><img src="${r.fotoPerfil}" alt="Foto de ${r.nome}"></span>`
+                        : `<span class="avatar avatar--sm">${iniciais}</span>`;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td${destaque}><strong>#${r.posicao}</strong></td>
+                        <td${destaque}>
+                            <a href="perfil-publico.html?id=${r.id}" class="stack" style="color: var(--primary); font-weight: 700; text-decoration: none;">
+                                ${avatar} <span>${r.nome}</span>
+                            </a>
+                        </td>
+                        <td><span class="badge badge-medio">Nível ${r.nivel}</span></td>
+                        <td>${r.quizzesResolvidos || 0}</td>
+                        <td><strong style="color: var(--primary);">${Math.round(r.pontos)} pts</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (me.tipo === 'ALUNO' && me.posicaoRanking) {
+                    mostrarMensagem('mensagem', `Sua posição atual: ${me.posicaoRanking}º lugar, com `
+                        + `${Math.round(me.pontos || 0)} pontos (nível ${me.nivel}).`, 'success');
+                }
+            } catch (err) {
+                console.error('Erro ao carregar o ranking:', err);
+                mostrarMensagem('mensagem', 'Não foi possível carregar o ranking: ' + err.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarRanking);
+    </script>
+</body>
+</html>

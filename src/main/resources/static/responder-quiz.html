@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prepare ENEM — Responder Quiz</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <nav class="sidebar" id="appSidebar"></nav>
+
+    <main class="conteudoPrincipal">
+        <header>
+            <div>
+                <h1 id="tituloQuiz">Carregando quiz...</h1>
+                <p class="hint" id="infoQuiz"></p>
+            </div>
+            <div class="user-status">
+                <div class="cronometro" id="cronometroBox" title="Tempo de realização">
+                    <i class="fas fa-clock"></i> <span id="cronometro">--:--</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="mensagem" style="display: none; margin-bottom: 1.25rem;"></div>
+
+        <div class="card" id="quizContainer">
+            <p>Carregando perguntas do quiz...</p>
+        </div>
+
+        <div class="card" id="resultadoCard" style="display: none; margin-top: 1.5rem;"></div>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script>
+        // A página controla o layout manualmente (reaproveita o usuário já carregado).
+        document.body.dataset.layoutManual = '1';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizzId = urlParams.get('id');
+
+        let quizData = null;
+        let usuarioAtual = null;
+        let tempoRestante = 0;    // usado quando o professor define tempo limite
+        let tempoDecorrido = 0;   // usado quando NÃO há tempo limite (contador informativo)
+        let timerInterval = null;
+        let enviando = false;
+        let tempoEsgotado = false;
+
+        function formatarTempo(totalSegundos) {
+            const seg = Math.max(0, Math.floor(totalSegundos));
+            const min = String(Math.floor(seg / 60)).padStart(2, '0');
+            const resto = String(seg % 60).padStart(2, '0');
+            return `${min}:${resto}`;
+        }
+
+        function atualizarCronometro() {
+            const el = document.getElementById('cronometro');
+            const box = document.getElementById('cronometroBox');
+            const segundos = (quizData && quizData.limiteTempo > 0) ? tempoRestante : tempoDecorrido;
+            el.innerText = formatarTempo(segundos);
+
+            if (quizData && quizData.limiteTempo > 0) {
+                box.classList.toggle('critico', tempoRestante <= 30);
+            }
+        }
+
+        async function carregarQuiz() {
+            if (!quizzId) {
+                alert('ID do quiz não especificado.');
+                window.location.href = 'quizzes.html';
+                return;
+            }
+
+            try {
+                usuarioAtual = await montarLayout();
+                quizData = await apiFetch(`/quizzes/${quizzId}`);
+
+                document.getElementById('tituloQuiz').innerText = quizData.nomeQuizz || 'Quiz';
+                const limite = quizData.limiteTempo > 0
+                    ? `Tempo limite: ${Math.round(quizData.limiteTempo / 60)} min (${quizData.limiteTempo}s)`
+                    : 'Sem tempo limite definido pelo professor';
+                document.getElementById('infoQuiz').innerText =
+                    `${quizData.materia || 'Geral'} • ${quizData.quantidadeQuestoes} questão(ões) • ${limite}`;
+
+                if (usuarioAtual && usuarioAtual.tipo === 'PROFESSOR') {
+                    mostrarMensagem('mensagem',
+                        'Você está autenticado como professor: é possível visualizar as questões, mas apenas contas de '
+                        + 'aluno registram tentativas e pontuação.', 'warning');
+                }
+
+                if (usuarioAtual && usuarioAtual.tipo === 'PROFESSOR') {
+                    mostrarMensagem('mensagem',
+                        'Você está autenticado como professor: é possível visualizar as questões, mas apenas contas de '
+                        + 'aluno registram tentativas e pontuação.', 'warning');
+                }
+
+                if (quizData.jaRespondido) {
+                    mostrarMensagem('mensagem',
+                        `Você já respondeu parte deste quiz (${Math.round(quizData.pontosJaObtidosNoQuiz || 0)} pts). ` +
+                        'O melhor resultado por questão é preservado: reenviar não duplica nem diminui sua pontuação.',
+                        'warning');
+                }
+
+                renderizarQuestoes();
+                iniciarCronometro();
+            } catch (err) {
+                console.error('Erro ao carregar o quiz:', err);
+                document.getElementById('quizContainer').innerHTML =
+                    `<p style="color: #ef4444;">Não foi possível carregar o quiz: ${err.message}</p>`;
+            }
+        }
+
+        /**
+         * Cronômetro REGRESSIVO: parte do tempo definido pelo professor e diminui até 00:00.
+         * Ao zerar: se todas as questões estiverem respondidas, envia automaticamente;
+         * caso contrário, bloqueia o envio automático e orienta o aluno a completar as pendentes
+         * (o backend limita o tempo registrado ao limite do quiz, então não há ganho em esperar).
+         * Se o quiz não tiver limite (0), exibe um contador progressivo apenas informativo.
+         */
+        function iniciarCronometro() {
+            const temLimite = quizData.limiteTempo > 0;
+
+            if (temLimite) {
+                tempoRestante = Number(quizData.limiteTempo);
+            } else {
+                tempoDecorrido = 0;
+            }
+            atualizarCronometro();
+
+            timerInterval = setInterval(() => {
+                if (temLimite) {
+                    tempoRestante--;
+                    atualizarCronometro();
+                    if (tempoRestante <= 0) {
+                        clearInterval(timerInterval);
+                        tempoEsgotado = true;
+                        finalizarPorTempo();
+                    }
+                } else {
+                    tempoDecorrido++;
+                    atualizarCronometro();
+                }
+            }, 1000);
+        }
+
+        function finalizarPorTempo() {
+            const pendentes = questoesPendentes();
+
+            if (pendentes.length === 0) {
+                submeterRespostas(true);
+                return;
+            }
+
+            destacarPendentes(pendentes);
+            mostrarMensagem('mensagem', 'O tempo definido pelo professor terminou. Responda as questões '
+                + 'pendentes destacadas abaixo e clique em "Enviar Respostas" para concluir a tentativa.', 'warning');
+        }
+
+        function questoesPendentes() {
+            const pendentes = [];
+            quizData.questoes.forEach(q => {
+                const sel = document.querySelector(`input[name="q_${q.questaoId}"]:checked`);
+                if (!sel) pendentes.push(q.questaoId);
+            });
+            return pendentes;
+        }
+
+        function destacarPendentes(ids) {
+            document.querySelectorAll('.questao-bloco').forEach(bloco => {
+                bloco.style.borderColor = '';
+            });
+            ids.forEach(id => {
+                const bloco = document.querySelector(`input[name="q_${id}"]`)?.closest('.questao-bloco');
+                if (bloco) bloco.style.borderColor = 'var(--accent-red)';
+            });
+        }
+
+        function renderizarQuestoes() {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = '';
+
+            if (!quizData.questoes || quizData.questoes.length === 0) {
+                container.innerHTML = '<p class="empty-state">Este quiz ainda não possui questões cadastradas.</p>';
+                return;
+            }
+
+            const form = document.createElement('form');
+            form.id = 'responderForm';
+
+            quizData.questoes.forEach((q, idx) => {
+                const dificuldade = q.dificuldadeAtual || q.dificuldadeInicial || 'INTERMEDIARIA';
+                const badge = dificuldade === 'FACIL' ? 'badge-facil'
+                    : (dificuldade === 'DIFICIL' ? 'badge-dificil' : 'badge-medio');
+
+                const bloco = document.createElement('div');
+                bloco.className = 'questao-bloco';
+                bloco.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+                        <h3 style="font-size:1.05rem;">Questão ${idx + 1}: ${q.pergunta}</h3>
+                        <span class="badge ${badge}" title="Dificuldade atual da questão">${dificuldade} • ${q.valorPontos} pts</span>
+                    </div>
+                    <div class="alternativas-grid" style="margin-top:1rem;">
+                        ${['A', 'B', 'C', 'D', 'E'].map(letra => `
+                            <label class="opcao">
+                                <input type="radio" name="q_${q.questaoId}" value="${letra}">
+                                <span><strong>${letra})</strong> ${q['alternativa' + letra]}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                form.appendChild(bloco);
+            });
+
+            const acoes = document.createElement('div');
+            acoes.className = 'stack';
+            acoes.style.marginTop = '1rem';
+            acoes.innerHTML = `
+                <button type="submit" class="botao" id="btnEnviarRespostas">
+                    <i class="fas fa-paper-plane"></i> Enviar Respostas
+                </button>
+                <a href="quizzes.html" class="botao botao-secundario"><i class="fas fa-arrow-left"></i> Voltar</a>
+            `;
+            form.appendChild(acoes);
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                submeterRespostas(false);
+            });
+
+            container.appendChild(form);
+        }
+
+        async function submeterRespostas(automatico) {
+            if (enviando) return;
+
+            const pendentes = questoesPendentes();
+            const respostas = [];
+
+            if (pendentes.length > 0) {
+                // RNF6: envio sem resposta é bloqueado com mensagem clara ao usuário.
+                destacarPendentes(pendentes);
+                const numeros = pendentes.map(id => {
+                    const i = quizData.questoes.findIndex(q => q.questaoId === id);
+                    return 'nº ' + (i + 1);
+                }).join(', ');
+                mostrarMensagem('mensagem', `Responda todas as questões antes de enviar. `
+                    + `Faltam ${pendentes.length} questão(ões): ${numeros}.`, 'error');
+                return;
+            }
+
+            quizData.questoes.forEach(q => {
+                const sel = document.querySelector(`input[name="q_${q.questaoId}"]:checked`);
+                respostas.push({ questaoId: q.questaoId, opcaoSelecionada: sel.value });
+            });
+
+            // Tempo efetivamente usado: diferença entre o limite e o que restou no cronômetro.
+            let tempoGasto = quizData.limiteTempo > 0
+                ? Math.max(1, Number(quizData.limiteTempo) - Math.max(0, tempoRestante))
+                : tempoDecorrido;
+            if (tempoEsgotado && quizData.limiteTempo > 0) {
+                tempoGasto = Number(quizData.limiteTempo);
+            }
+
+            const payload = { tempoGasto: tempoGasto, respostas: respostas };
+
+            enviando = true;
+            const botao = document.getElementById('btnEnviarRespostas');
+            if (botao) {
+                botao.disabled = true;
+                botao.innerHTML = '<span class="spinner spinner-white"></span> Enviando...';
+            }
+            clearInterval(timerInterval);
+
+            try {
+                const resultado = await apiFetch(`/quizzes/${quizzId}/attempt`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                exibirResultado(resultado, automatico);
+            } catch (err) {
+                console.error('Erro ao enviar respostas:', err);
+                mostrarMensagem('mensagem', 'Não foi possível enviar suas respostas: ' + err.message, 'error');
+                enviando = false;
+                if (botao) {
+                    botao.disabled = false;
+                    botao.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Respostas';
+                }
+            }
+        }
+
+        function exibirResultado(resultado, automatico) {
+            document.getElementById('responderForm').style.display = 'none';
+            const card = document.getElementById('resultadoCard');
+            card.style.display = 'block';
+
+            const avisoTempo = automatico
+                ? '<p class="hint">A tentativa foi enviada automaticamente porque o tempo limite do quiz terminou.</p>'
+                : '';
+            const calibracao = resultado.mensagemCalibracao
+                ? `<div class="message-warning" style="margin-top:1rem;">${resultado.mensagemCalibracao}</div>`
+                : '';
+            const subiu = resultado.subiuDeNivel
+                ? `<div class="message-success" style="margin-top:1rem;"><i class="fas fa-arrow-up"></i>
+                     Parabéns! Você subiu para o nível ${resultado.nivelNovo}!</div>`
+                : '';
+
+            card.innerHTML = `
+                <h2><i class="fas fa-clipboard-check" style="color: var(--primary); margin-right:0.5rem;"></i> Resultado da Tentativa</h2>
+                ${avisoTempo}
+                <div class="resultado-resumo">
+                    <div class="resultado-item"><strong>${resultado.acertos}/${resultado.totalQuestoes}</strong><span>Acertos</span></div>
+                    <div class="resultado-item"><strong>+${Math.round(resultado.pontuacaoGanha)}</strong><span>Pontos nesta tentativa</span></div>
+                    <div class="resultado-item"><strong>${Math.round(resultado.pontosTotais)}</strong><span>Pontuação total</span></div>
+                    <div class="resultado-item"><strong>Nível ${resultado.nivelNovo}</strong><span>Nível atual</span></div>
+                    <div class="resultado-item"><strong>${formatarTempo(resultado.tempoGasto)}</strong><span>Tempo registrado</span></div>
+                </div>
+                ${subiu}
+                ${calibracao}
+                <h3 style="margin-top:1.5rem;">Gabarito e correção</h3>
+                ${(resultado.detalhes || []).map((d, i) => `
+                    <div class="detalhe-questao ${d.acertou ? 'correto' : 'incorreto'}">
+                        <strong>Questão ${i + 1}: ${d.acertou ? 'Correta' : 'Incorreta'}</strong>
+                        <p class="hint">${d.pergunta}</p>
+                        <p><strong>Sua resposta:</strong> ${d.suaResposta || '-'} &nbsp;|&nbsp;
+                           <strong>Resposta correta:</strong> ${d.respostaCorreta}</p>
+                        <p class="hint">Dificuldade: ${d.dificuldadeAtual} • Valor: ${d.valorPontos} pts
+                           ${d.jaAcertouAntes ? ' • pontos já contabilizados anteriormente' : ''}</p>
+                    </div>
+                `).join('')}
+                <div class="stack" style="margin-top:1.25rem;">
+                    <a href="quizzes.html" class="botao"><i class="fas fa-gamepad"></i> Mais quizzes</a>
+                    <a href="perfil.html" class="botao botao-secundario"><i class="fas fa-trophy"></i> Ver ranking</a>
+                    <a href="dashboard.html" class="botao botao-azul"><i class="fas fa-house"></i> Início</a>
+                </div>
+            `;
+            card.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarQuiz);
+    </script>
+</body>
+</html>
