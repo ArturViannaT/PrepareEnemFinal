@@ -54,11 +54,17 @@
 
             try {
                 const client = getSupabaseClient();
-                if (!client) throw new Error('Cliente Supabase não inicializado');
+                if (!client) throw new Error('Serviço de autenticação temporariamente indisponível.');
 
                 // Autentica via Supabase Auth (única fonte de autenticação do sistema)
                 const { data, error } = await client.auth.signInWithPassword({ email, password });
                 if (error) throw new Error(error.message);
+
+                if (!await isEmailConfirmed()) {
+                    await client.auth.signOut();
+                    window.location.href = `email-pendente.html?email=${encodeURIComponent(email)}`;
+                    return;
+                }
 
                 msg.style.color = '#10b981';
                 msg.innerText = 'Login realizado! Carregando seu perfil...';
@@ -67,13 +73,27 @@
                 let perfil = null;
                 try {
                     perfil = await apiFetch('/users/me');
+
+                    const authUser = await getCurrentUser();
+                    const tipoDeclarado = authUser?.user_metadata?.tipo?.toUpperCase();
+                    if ((tipoDeclarado === 'ALUNO' || tipoDeclarado === 'PROFESSOR')
+                            && tipoDeclarado !== perfil.tipo) {
+                        try {
+                            perfil = await apiFetch('/users/sync', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    tipo: tipoDeclarado,
+                                    nome: authUser.user_metadata.nome || perfil.nome
+                                })
+                            });
+                        } catch (papelErr) {
+                            console.warn('Não foi possível corrigir o tipo de perfil:', papelErr.message);
+                        }
+                    }
                 } catch (syncErr) {
                     console.error('Falha ao sincronizar o perfil com o backend:', syncErr);
-                    msg.style.color = '#f59e0b';
-                    msg.innerText = 'Login efetuado, mas o backend não respondeu (' + syncErr.message + '). '
-                        + 'Verifique se a aplicação Spring Boot está em execução.';
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
-                    return;
+                    await client.auth.signOut();
+                    throw new Error('Não foi possível carregar os dados da conta. Verifique sua conexão e tente novamente.');
                 }
 
                 msg.style.color = '#10b981';
@@ -83,7 +103,7 @@
                 }, 700);
             } catch (err) {
                 msg.style.color = '#ef4444';
-                msg.innerText = 'Erro ao fazer login: ' + err.message;
+                msg.innerText = getAuthErrorMessage(err);
             }
         });
     </script>

@@ -85,15 +85,10 @@
                 document.getElementById('tituloQuiz').innerText = quizData.nomeQuizz || 'Quiz';
                 const limite = quizData.limiteTempo > 0
                     ? `Tempo limite: ${Math.round(quizData.limiteTempo / 60)} min (${quizData.limiteTempo}s)`
-                    : 'Sem tempo limite definido pelo professor';
+                    : 'Sem tempo limite';
                 document.getElementById('infoQuiz').innerText =
                     `${quizData.materia || 'Geral'} • ${quizData.quantidadeQuestoes} questão(ões) • ${limite}`;
 
-                if (usuarioAtual && usuarioAtual.tipo === 'PROFESSOR') {
-                    mostrarMensagem('mensagem',
-                        'Você está autenticado como professor: é possível visualizar as questões, mas apenas contas de '
-                        + 'aluno registram tentativas e pontuação.', 'warning');
-                }
 
                 if (usuarioAtual && usuarioAtual.tipo === 'PROFESSOR') {
                     mostrarMensagem('mensagem',
@@ -103,9 +98,8 @@
 
                 if (quizData.jaRespondido) {
                     mostrarMensagem('mensagem',
-                        `Você já respondeu parte deste quiz (${Math.round(quizData.pontosJaObtidosNoQuiz || 0)} pts). ` +
-                        'O melhor resultado por questão é preservado: reenviar não duplica nem diminui sua pontuação.',
-                        'warning');
+                        'Você já respondeu a este quiz. Seu melhor resultado será mantido.',
+                        'info');
                 }
 
                 renderizarQuestoes();

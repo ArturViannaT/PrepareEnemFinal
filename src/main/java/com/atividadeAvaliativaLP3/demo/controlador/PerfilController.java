@@ -1,6 +1,7 @@
 package com.atividadeAvaliativaLP3.demo.controlador;
 
 import com.atividadeAvaliativaLP3.demo.*;
+import com.atividadeAvaliativaLP3.demo.persistencia.*;
 import com.atividadeAvaliativaLP3.demo.dto.*;
 import com.atividadeAvaliativaLP3.demo.excecao.RecursoNaoEncontradoException;
 import com.atividadeAvaliativaLP3.demo.excecao.RegraNegocioException;

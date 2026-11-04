@@ -1,4 +1,6 @@
-package com.atividadeAvaliativaLP3.demo;
+package com.atividadeAvaliativaLP3.demo.persistencia;
+
+import com.atividadeAvaliativaLP3.demo.Quizz;
 
 import java.util.List;
 import java.util.Optional;

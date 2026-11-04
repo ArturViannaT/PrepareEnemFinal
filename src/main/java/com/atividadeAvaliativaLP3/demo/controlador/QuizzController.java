@@ -1,6 +1,7 @@
 package com.atividadeAvaliativaLP3.demo.controlador;
 
 import com.atividadeAvaliativaLP3.demo.*;
+import com.atividadeAvaliativaLP3.demo.persistencia.*;
 import com.atividadeAvaliativaLP3.demo.dto.*;
 import com.atividadeAvaliativaLP3.demo.excecao.RecursoNaoEncontradoException;
 import com.atividadeAvaliativaLP3.demo.excecao.RegraNegocioException;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/quizzes")
@@ -320,6 +322,8 @@ public class QuizzController {
     public ResponseEntity<Map<String, Object>> obterQuizzParaRealizacao(@PathVariable("id") Integer id) {
         Quizz quizz = quizzRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Quizz não encontrado"));
+
+        Usuario usuario = usuarioServico.obterUsuarioLogado();
 
         Map<String, Object> response = visaoQuizz(quizz, false);
 

@@ -1,4 +1,6 @@
-package com.atividadeAvaliativaLP3.demo;
+package com.atividadeAvaliativaLP3.demo.persistencia;
+
+import com.atividadeAvaliativaLP3.demo.Questao;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -34,7 +34,6 @@
         <div id="mensagem" style="display: none; margin-bottom: 1rem;"></div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-            <button class="botao" id="tabTodosBtn" onclick="trocarAbaQuizz('todos')"><i class="fas fa-list"></i> Quizzes Disponíveis</button>
             <button class="botao botao-secundario" id="tabMeusQuizzesBtn" style="display: none;" onclick="trocarAbaQuizz('meus')"><i class="fas fa-folder"></i> Meus Quizzes</button>
             <button class="botao botao-azul" id="tabNovoQuizzBtn" style="display: none;" onclick="trocarAbaQuizz('novo')"><i class="fas fa-plus-circle"></i> Publicar Quiz</button>
             <button class="botao botao-secundario" id="tabRecalcularBtn" style="display: none;" onclick="recalcularPontuacao()"><i class="fas fa-calculator"></i> Recalcular Pontuação</button>
@@ -42,11 +41,11 @@
 
         <!-- Formulário de Criação/Edição de Quiz (Professor) -->
         <div class="card" id="formQuizzCard" style="display: none; margin-bottom: 2rem;">
-            <h2 id="formQuizzTitulo">Criar Atividade / Quiz Objetivos</h2>
+            <h2 id="formQuizzTitulo">Criar Quiz</h2>
             <p class="hint" style="margin-bottom: 1rem;">
-                Cada questão tem uma <strong>dificuldade inicial</strong> definida pelo professor
-                (Fácil = 10 pts, Intermediária = 50 pts, Difícil = 100 pts). Após 10 respostas válidas de alunos,
-                o sistema recalibra automaticamente a dificuldade da questão com base no percentual de acertos.
+                Defina o tema, configure a dificuldade e o tempo limite, e cadastre as questões.
+
+
             </p>
             <form id="quizzForm" style="margin-top: 1rem;">
                 <input type="hidden" id="editQuizzId" value="">
@@ -126,13 +125,13 @@
                 document.getElementById('tabRecalcularBtn').style.display = 'inline-flex';
             }
 
-            trocarAbaQuizz('todos');
+            const abaInicial = new URLSearchParams(window.location.search).get('aba');
+            trocarAbaQuizz(abaInicial === 'novo' && usuarioAtual.tipo === 'PROFESSOR' ? 'novo' : 'todos');
         }
 
         function trocarAbaQuizz(aba) {
             abaAtivaQuizz = aba;
             document.getElementById('formQuizzCard').style.display = (aba === 'novo') ? 'block' : 'none';
-            document.getElementById('tabTodosBtn').className = (aba === 'todos') ? 'botao' : 'botao botao-secundario';
 
             const meus = document.getElementById('tabMeusQuizzesBtn');
             if (meus) meus.className = (aba === 'meus') ? 'botao' : 'botao botao-secundario';
@@ -369,8 +368,8 @@
                         </select>
                     </div>
                 </div>
-                <p class="hint">Respostas de alunos: <strong>${q.totalRespostas || 0}</strong>
-                   ${q.calibrada ? ' • dificuldade já recalibrada automaticamente' : ' • recalibra após 10 respostas válidas'}</p>
+                <p class="hint">Total de respostas: <strong>${q.totalRespostas || 0}</strong></p>
+
             `;
             document.getElementById('questoesContainer').appendChild(bloco);
         }
