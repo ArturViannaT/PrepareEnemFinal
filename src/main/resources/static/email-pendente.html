@@ -244,7 +244,7 @@
 
             <!-- Timer de reenvio -->
             <div class="timer" id="timerReenvio" style="display: none;">
-                ⏱️ Você poderá reenviar em <span id="contagem">30</span>s
+                <i class="fas fa-clock"></i> Aguarde <span id="contagem">30</span>s para reenviar.
             </div>
 
             <!-- Botões -->
@@ -257,17 +257,7 @@
                 </button>
             </div>
 
-            <!-- Dicas Extras -->
-            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-                <p style="font-size: 0.85rem; color: #6b7280; margin: 0;">
-                    <strong>💡 Dica:</strong> Se não encontrar o e-mail em lugar nenhum, clique em "Reenviar E-mail" para receber um novo link.
-                </p>
-                <p style="font-size: 0.85rem; color: #6b7280; margin: 0.75rem 0 0 0;">
-                    <strong>❓ Link expirou?</strong> Os links têm validade de 24 horas. Reenviaremos um novo link caso o anterior tenha expirado.
-                </p>
-            </div>
-        </div>
-
+          
     </div>
 
     <script src="js/supabase.js"></script>
@@ -282,6 +272,7 @@
         const timerReenvio = document.getElementById('timerReenvio');
         const contagem = document.getElementById('contagem');
 
+        let emailPendente = new URLSearchParams(window.location.search).get('email') || '';
         let ultimaRequisicao = 0;
         let podeReenviar = true;
 
@@ -338,19 +329,18 @@
                 btnReenviar.disabled = true;
                 const client = getSupabaseClient();
                 const session = await getCurrentSession();
+                const email = session?.user?.email || emailPendente;
 
-                if (!session || !session.user) {
-                    showErro('Sessão expirada. Por favor, faça login novamente.');
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
+                if (!email) {
+                    showErro('Informe seu e-mail ao voltar para esta página pelo cadastro.');
+                    btnReenviar.disabled = false;
                     return;
                 }
 
                 // Fazer o resend do email
                 const { error } = await client.auth.resend({
                     type: 'signup',
-                    email: session.user.email,
+                    email,
                     options: {
                         emailRedirectTo: `${window.location.origin}/email-confirmado.html`
                     }
@@ -396,13 +386,12 @@
                 const session = await getCurrentSession();
                 const user = await getCurrentUser();
 
-                if (!session) {
-                    // Não está logado, redirecionar para login
+                if (!session && !emailPendente) {
                     window.location.href = 'login.html';
                     return;
                 }
 
-                if (!user || !user.email) {
+                if (session && (!user || !user.email)) {
                     showErro('Erro ao carregar dados do usuário.');
                     setTimeout(() => {
                         window.location.href = 'login.html';
@@ -420,7 +409,8 @@
                 // Email não confirmado, mostrar página de pendência
                 estadoCarregando.style.display = 'none';
                 estadoPendente.style.display = 'block';
-                emailDisplay.textContent = user.email;
+                emailPendente = user?.email || emailPendente;
+                emailDisplay.textContent = emailPendente || 'Seu e-mail de cadastro';
 
             } catch (err) {
                 console.error('Erro ao verificar sessão:', err);

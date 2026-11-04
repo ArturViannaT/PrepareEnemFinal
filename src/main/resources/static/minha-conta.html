@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -49,7 +49,7 @@
                         <input type="text" id="nomeInput" class="form-control" required minlength="2" maxlength="100">
                     </div>
                     <div class="form-group">
-                        <label>E-mail (gerenciado pelo Supabase Auth)</label>
+                        <label>E-mail</label>
                         <input type="email" id="emailInput" class="form-control" disabled>
                     </div>
                 </div>
@@ -71,8 +71,6 @@
                         <span id="previewFoto" class="avatar avatar--lg"></span>
                         <div style="flex: 1; min-width: 220px;">
                             <input type="file" id="arquivoFoto" class="form-control" accept="image/png,image/jpeg,image/webp">
-                            <p class="hint">A imagem é enviada para o Supabase Storage (bucket <code>avatars</code>) e a URL
-                               fica salva no seu perfil. Alternativamente, informe uma URL abaixo.</p>
                         </div>
                     </div>
                     <input type="url" id="fotoUrlInput" class="form-control" style="margin-top: 0.75rem;"
@@ -89,9 +87,9 @@
         <!-- Zona de risco -->
         <div class="card">
             <h2><i class="fas fa-triangle-exclamation" style="color: var(--accent-red); margin-right: 0.5rem;"></i> Excluir conta</h2>
-            <p class="hint">Remove permanentemente seus dados na plataforma (perfil, respostas, tentativas, avaliações e,
-               no caso de professor, os conteúdos e quizzes de sua autoria). A conta de login no Supabase Auth não é
-               removida automaticamente.</p>
+            <p class="hint">Remove permanentemente sua conta e todos os dados associados na plataforma.</p>
+
+
             <button class="botao botao-perigo" onclick="excluirConta()"><i class="fas fa-user-slash"></i> Excluir minha conta</button>
         </div>
     </main>
@@ -134,10 +132,10 @@
         /** Envia a foto escolhida para o Supabase Storage e devolve a URL pública. */
         async function enviarFotoDireta(arquivo) {
             const client = getSupabaseClient();
-            if (!client) throw new Error('Cliente Supabase não inicializado.');
+            if (!client) throw new Error('Serviço de autenticação indisponível.');
 
             const user = await getCurrentUser();
-            if (!user) throw new Error('Sessão do Supabase Auth não encontrada.');
+            if (!user) throw new Error('Sessão de usuário não encontrada.');
 
             const extensao = (arquivo.name.split('.').pop() || 'png').toLowerCase();
             const caminho = `${user.id}/perfil-${Date.now()}.${extensao}`;
@@ -149,8 +147,8 @@
             });
 
             if (error) {
-                throw new Error('Falha no upload da imagem (' + error.message + '). '
-                    + 'Verifique se o bucket "' + BUCKET_FOTOS + '" existe no Supabase Storage e se o usuário tem permissão de escrita.');
+                throw new Error('Não foi possível enviar a imagem. Tente novamente mais tarde.');
+
             }
 
             const { data } = client.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);

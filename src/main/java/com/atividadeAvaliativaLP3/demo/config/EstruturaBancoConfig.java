@@ -66,6 +66,78 @@ public class EstruturaBancoConfig implements CommandLineRunner {
             "UPDATE questao SET calibrada = false WHERE calibrada IS NULL",
             // Descrição/bio pública do usuário (substitui o antigo professor.biografia)
             "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS descricao text",
+            // Identificação direta nas tabelas de especialização (facilita navegação no banco sem ser apenas ID)
+            "ALTER TABLE aluno ADD COLUMN IF NOT EXISTS nome varchar(255)",
+            "ALTER TABLE aluno ADD COLUMN IF NOT EXISTS email varchar(255)",
+            "ALTER TABLE professor ADD COLUMN IF NOT EXISTS nome varchar(255)",
+            "ALTER TABLE professor ADD COLUMN IF NOT EXISTS email varchar(255)",
+            "UPDATE aluno a SET nome = u.nome, email = u.email FROM usuario u WHERE u.id = a.usuario_id AND (a.nome IS NULL OR a.email IS NULL)",
+            "UPDATE professor p SET nome = u.nome, email = u.email FROM usuario u WHERE u.id = p.usuario_id AND (p.nome IS NULL OR p.email IS NULL)",
+            """
+            CREATE OR REPLACE FUNCTION fn_sync_usuario_especializacoes()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE aluno SET nome = NEW.nome, email = NEW.email WHERE usuario_id = NEW.id;
+                UPDATE professor SET nome = NEW.nome, email = NEW.email WHERE usuario_id = NEW.id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """,
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_usuario_especializacoes') THEN
+                    CREATE TRIGGER trg_sync_usuario_especializacoes
+                    AFTER INSERT OR UPDATE OF nome, email ON usuario
+                    FOR EACH ROW
+                    EXECUTE FUNCTION fn_sync_usuario_especializacoes();
+                END IF;
+            END $$;
+            """,
+            """
+            CREATE OR REPLACE FUNCTION fn_sync_aluno_dados()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                SELECT u.nome, u.email INTO NEW.nome, NEW.email
+                  FROM usuario u
+                 WHERE u.id = NEW.usuario_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """,
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_aluno_dados') THEN
+                    CREATE TRIGGER trg_sync_aluno_dados
+                    BEFORE INSERT OR UPDATE ON aluno
+                    FOR EACH ROW
+                    EXECUTE FUNCTION fn_sync_aluno_dados();
+                END IF;
+            END $$;
+            """,
+            """
+            CREATE OR REPLACE FUNCTION fn_sync_professor_dados()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                SELECT u.nome, u.email INTO NEW.nome, NEW.email
+                  FROM usuario u
+                 WHERE u.id = NEW.usuario_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """,
+            """
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_professor_dados') THEN
+                    CREATE TRIGGER trg_sync_professor_dados
+                    BEFORE INSERT OR UPDATE ON professor
+                    FOR EACH ROW
+                    EXECUTE FUNCTION fn_sync_professor_dados();
+                END IF;
+            END $$;
+            """,
             """
             UPDATE usuario
                SET descricao = p.biografia

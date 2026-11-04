@@ -1,0 +1,168 @@
+RELATORIO - MODELO INSPIRADO NA TRI, PONTUACAO, NIVEIS E GAMIFICACAO
+Projeto: PrepareEnem
+Data: 04/11/2026
+
+1. RESUMO EXECUTIVO
+
+O projeto implementa um modelo proprio de dificuldade adaptativa inspirado na TRI (Teoria de Resposta ao Item). Ele NAO implementa a TRI oficial do ENEM: nao estima proficiencia (theta), nao calcula parametros de discriminacao ou acerto casual e nao compara padroes de resposta entre itens.
+
+A regra atual usa a proporcao de acertos das primeiras 10 respostas validas de cada questao para reclassificar sua dificuldade. A classificacao determina o valor em pontos de um acerto. Quando a questao e recalibrada, os pontos das respostas anteriores sao atualizados e a pontuacao, o XP e o nivel dos alunos sao recalculados.
+
+Nao e necessario criar 100 contas. Para testar o algoritmo sem nenhuma conta, use os testes unitarios descritos neste relatorio. Para um teste ponta a ponta autenticado no sistema, sao necessarios 10 alunos distintos de QA por questao, pois o banco permite uma resposta consolidada por aluno e questao. Esses mesmos 10 perfis podem ser reutilizados em varias questoes de teste.
+
+2. COMO A CALIBRACAO FUNCIONA
+
+2.1 Dificuldade inicial
+
+Ao criar uma questao, o professor informa uma dificuldade inicial. Os nomes aceitos sao FACIL, INTERMEDIARIA e DIFICIL. Valores legados como MEDIO sao normalizados para INTERMEDIARIA.
+
+2.2 Valor em pontos por dificuldade
+
+FACIL: 10 pontos por resposta correta.
+INTERMEDIARIA: 50 pontos por resposta correta.
+DIFICIL: 100 pontos por resposta correta.
+Resposta incorreta: 0 ponto.
+
+2.3 Regra de recalibracao
+
+A questao e calibrada quando possui 10 respostas validas, uma por aluno distinto. A restricao de unicidade e por aluno e questao. Repetir a mesma questao pela mesma conta nao cria uma nova resposta estatistica e nao aumenta a amostra; o sistema preserva o melhor resultado daquele aluno.
+
+A amostra usada e composta pelas 10 primeiras respostas registradas, em ordem crescente de ID da resposta. O percentual de acertos dessas 10 respostas define a dificuldade:
+
+0% a 39%: DIFICIL, 100 pontos.
+40% a 69%: INTERMEDIARIA, 50 pontos.
+70% a 100%: FACIL, 10 pontos.
+
+Como a amostra tem exatamente 10 respostas, cada acerto equivale a 10 pontos percentuais. Exemplos:
+
+3 acertos em 10 = 30% = DIFICIL.
+4 acertos em 10 = 40% = INTERMEDIARIA.
+6 acertos em 10 = 60% = INTERMEDIARIA.
+7 acertos em 10 = 70% = FACIL.
+
+A calibracao e executada uma unica vez por questao. Novas respostas posteriores atualizam estatisticas gerais, mas nao mudam novamente a dificuldade calibrada.
+
+2.4 Efeito sobre respostas anteriores
+
+Quando a dificuldade muda, o valor de pontos aplicado a todas as respostas ja registradas para aquela questao e substituido pelo valor novo. Acertos passam a valer o novo valor; erros continuam valendo zero. Em seguida, a pontuacao dos alunos afetados e recalculada a partir das respostas consolidadas.
+
+Isso significa que a pontuacao final do aluno pode subir ou cair quando uma questao e recalibrada. A mudanca nao e um bonus acumulado: os valores antigos sao substituidos para evitar duplicacao.
+
+3. COMO TESTAR SEM CRIAR CONTAS
+
+3.1 Teste automatizado sem banco e sem autenticacao
+
+Foi adicionado o teste unitario:
+
+src/test/java/com/atividadeAvaliativaLP3/demo/servico/TriServicoTest.java
+
+Ele usa respostas simuladas em memoria e cobre:
+- classificacao nos limites de 39%, 40%, 69% e 70%;
+- ausencia de calibracao com apenas 9 respostas;
+- calibracao com 10 respostas;
+- classificacao como DIFICIL para 3 acertos em 10;
+- atualizacao do valor das respostas corretas anteriores para 100 pontos e das incorretas para zero;
+- bloqueio de uma segunda calibracao da mesma questao.
+
+Comando no PowerShell, na pasta do projeto:
+
+.\mvnw.cmd -Dtest=TriServicoTest test
+
+Resultado validado durante a preparacao deste relatorio: 7 testes passaram e 0 falharam.
+
+Esse teste valida a regra do servico, sem criar usuarios, sem Supabase e sem gravar no banco. E a forma recomendada para verificar rapidamente os limites matematicos durante o desenvolvimento.
+
+3.2 Teste ponta a ponta em ambiente de QA
+
+O fluxo real usa autenticacao e restringe cada aluno a uma resposta consolidada por questao. Para validar o fluxo completo de tela, API e banco, use um ambiente local ou de staging e 10 contas de aluno de QA, nao 100. As mesmas contas podem responder varias questoes; a unicidade e por aluno e questao.
+
+Procedimento sugerido:
+1. Crie um quiz de QA com uma questao simples e resposta correta conhecida.
+2. Use 10 alunos de teste diferentes para responder essa questao.
+3. Para testar DIFICIL, faca 3 alunos acertarem e 7 errarem.
+4. Para testar INTERMEDIARIA, use 4 acertos e 6 erros.
+5. Para testar FACIL, use 7 acertos e 3 erros.
+6. Confira a resposta da submissao do decimo aluno. Quando houver calibracao, a API informa a mensagem de recalibracao e devolve a dificuldade e os pontos atuais nos detalhes da questao.
+7. Confira a questao na visao do professor, que mostra dificuldade atual, valor em pontos e estatisticas.
+8. Confira os pontos/XP/nivel dos alunos que acertaram antes da decima resposta; os pontos da questao devem refletir o valor novo.
+
+A interface preserva o melhor resultado do aluno. Portanto, para controlar exatamente a amostra, cada aluno deve responder a questao uma vez e as contas de QA devem comecar sem resposta anterior para aquela questao. O ID de resposta define a ordem da amostra; planeje a ordem de submissao.
+
+Uma unica questao pode testar apenas uma faixa, pois a calibracao e unica. Para verificar as tres faixas no fluxo integrado, crie tres questoes novas e reutilize os mesmos 10 alunos, aplicando uma distribuicao de acertos diferente em cada questao.
+
+3.3 Uso do endpoint administrativo
+
+Endpoint: POST /api/quizzes/tri/recalcular
+Acesso: somente professor.
+
+Esse endpoint nao cria respostas nem simula alunos. Ele recalcula estatisticas, executa calibracoes pendentes em questoes que ja tenham 10 respostas e ainda nao estejam calibradas e reconcilia pontos/XP/niveis dos alunos com base nas respostas existentes.
+
+Use-o apenas em desenvolvimento ou staging durante os testes. Embora nao apague respostas, ele reescreve valores derivados para todas as questoes e pode alterar a pontuacao exibida dos alunos. Ele nao desfaz uma calibracao ja realizada e nao deve ser usado como mecanismo de reset em producao.
+
+Para repetir um cenario, prefira criar uma nova questao de QA ou reiniciar os dados descartaveis do ambiente de teste. Nao altere respostas nem marque questoes como nao calibradas diretamente em um banco de producao.
+
+4. PONTUACAO, XP E NIVEIS
+
+4.1 Pontuacao
+
+A fonte de verdade e a resposta consolidada por aluno e questao. A pontuacao total do aluno e a soma de pontos_aplicados das suas respostas. Uma resposta correta recebe o valor atual da questao; uma resposta incorreta vale zero.
+
+Ao refazer um quiz, o aluno nao acumula pontos repetidos. O melhor resultado por questao e preservado: uma resposta correta anterior nao pode ser rebaixada por uma tentativa errada posterior. Se antes errou e depois acerta, o resultado consolidado passa a correto.
+
+A pontuacao registrada na tentativa e o ganho daquela tentativa; ela nao deve ser confundida com o total historico atual do aluno, que pode ser recalculado quando uma questao muda de valor.
+
+4.2 XP
+
+O XP e recalculado como a pontuacao total arredondada do aluno. No estado atual do codigo, XP e pontos acompanham o mesmo total; nao existe uma formula separada de XP por tempo, sequencia diaria ou atividade.
+
+4.3 Niveis
+
+O nivel e derivado diretamente do total de pontos. Os limites definidos pelo servico sao:
+
+Nivel 1: 0 pontos
+Nivel 2: 100 pontos
+Nivel 3: 225 pontos
+Nivel 4: 375 pontos
+Nivel 5: 550 pontos
+Nivel 6: 750 pontos
+Nivel 7: 975 pontos
+Nivel 8: 1.225 pontos
+Nivel 9: 1.500 pontos
+Nivel 10: 1.800 pontos
+Nivel 11: 2.125 pontos
+Nivel 12: 2.475 pontos
+
+A formula para nivel n maior que 1 e:
+100 * (n - 1) + 12,5 * (n - 1) * (n - 2)
+
+O calculo limita o nivel a 99. A API publica a tabela de progressao em GET /api/quizzes/tri/niveis.
+
+4.4 Outros indicadores de gamificacao
+
+- O perfil do aluno mostra pontos, XP, nivel e progresso para o proximo nivel.
+- O ranking ordena alunos pela pontuacao.
+- O sistema contabiliza quizzes resolvidos com base nas tentativas registradas. Refazer um quiz pode criar uma nova tentativa, embora nao duplique a pontuacao consolidada das mesmas questoes.
+- Na interface do aluno, pontos e nivel aparecem no cabecalho. Para o professor, a interface apresenta o indicador Professor Verificado em vez dos indicadores de gamificacao do aluno.
+
+5. COMO CONFERIR OS RESULTADOS
+
+Durante o teste, confira estes pontos:
+
+- Antes da decima resposta distinta, a dificuldade atual permanece sem calibracao e a flag calibrada deve continuar falsa.
+- Na decima resposta, a distribuicao dos 10 primeiros IDs de resposta determina a faixa.
+- A resposta da submissao informa a dificuldade atual, o valor da questao e, quando aplicavel, a mensagem de recalibracao.
+- No detalhamento de autoria do professor, confira dificuldade atual, valor em pontos, total de respostas, acertos e percentual.
+- Depois da recalibracao, as respostas corretas antigas devem conter o valor novo e as incorretas devem conter zero.
+- Os pontos e o nivel de cada aluno devem corresponder a soma atual das suas respostas, e nao a soma de recompensas antigas.
+- Uma nova submissao da mesma questao pela mesma conta nao deve criar uma segunda resposta consolidada nem disparar nova calibracao.
+
+6. CODIGO RELACIONADO
+
+- src/main/java/com/atividadeAvaliativaLP3/demo/servico/TriServico.java: regras de classificacao, pontos, calibracao, XP e nivel.
+- src/main/java/com/atividadeAvaliativaLP3/demo/controlador/QuizzController.java: submissao de quiz, endpoint de recalculo administrativo e tabela de niveis.
+- src/main/java/com/atividadeAvaliativaLP3/demo/RespostaQuestao.java: resposta consolidada e restricao unica por aluno/questao.
+- src/main/java/com/atividadeAvaliativaLP3/demo/Aluno.java: campos de pontos, XP, nivel e quizzes resolvidos.
+- src/main/java/com/atividadeAvaliativaLP3/demo/controlador/PerfilController.java: dados do perfil, progresso de nivel e ranking.
+- src/test/java/com/atividadeAvaliativaLP3/demo/servico/TriServicoTest.java: testes automatizados das regras de calibracao.
+
+FIM DO RELATORIO

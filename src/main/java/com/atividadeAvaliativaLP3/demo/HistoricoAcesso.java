@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "HistoricoAcesso")
+@Table(name = "historico_acesso")
 public class HistoricoAcesso {
 
     @Id
@@ -15,7 +15,7 @@ public class HistoricoAcesso {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    @Column(name = "conteudo_id", nullable = false)
+    @Column(name = "conteudo_id")
     private Integer conteudoId;
 
     @Column(name = "acessado_em", nullable = false)

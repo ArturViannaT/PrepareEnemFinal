@@ -1,5 +1,7 @@
 // API Helper - Integração Automática entre Frontend, Supabase Auth e Spring Boot API
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = (window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('file'))
+    ? `${window.location.origin}/api`
+    : 'http://localhost:8080/api';
 
 // Faz chamadas HTTP autenticadas para o Spring Boot obtendo o token JWT 100% automaticamente da sessão Supabase Auth
 async function apiFetch(endpoint, options = {}) {
@@ -26,7 +28,7 @@ async function apiFetch(endpoint, options = {}) {
             headers
         });
     } catch (err) {
-        throw new Error('Não foi possível conectar ao backend (Spring Boot em http://localhost:8080). Verifique se a aplicação Java está em execução.');
+        throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
     }
 
     if (response.status === 401) {

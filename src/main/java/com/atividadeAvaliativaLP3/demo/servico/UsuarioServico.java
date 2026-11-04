@@ -1,6 +1,7 @@
 package com.atividadeAvaliativaLP3.demo.servico;
 
 import com.atividadeAvaliativaLP3.demo.*;
+import com.atividadeAvaliativaLP3.demo.persistencia.*;
 import com.atividadeAvaliativaLP3.demo.excecao.RegraNegocioException;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
@@ -130,21 +131,10 @@ public class UsuarioServico {
 
         Optional<Usuario> existente = usuarioRepository.findByAuthId(authId);
         if (existente.isPresent()) {
-            Usuario u = existente.get();
-            String tipoDeclarado = obterTipoDeclaradoNoToken();
-
-            // Corrige o papel apenas quando há evidência explícita (declaração do token),
-            // e nunca apagando a linha de `usuario`.
-            if (tipoDeclarado != null && !tipoDeclarado.equals(u.getTipo())) {
-                Usuario migrado = migrarPapelSePossivel(u, tipoDeclarado, "declaração do token Supabase");
-                if (migrado != null) {
-                    return migrado;
-                }
-            }
-            return u;
+            return existente.get();
         }
 
-        return criarPerfilInicial(authId, email, obterTipoDeclaradoNoToken(), null);
+        return criarPerfilInicial(authId, email, inferirTipoPorEmail(email), null);
     }
 
     // ===================== CRIAÇÃO / INFERÊNCIA DE PAPEL =====================
@@ -268,26 +258,23 @@ public class UsuarioServico {
         String email = getEmailLogado();
 
         Optional<Usuario> usuarioOpt = usuarioRepository.findByAuthId(authId);
+        String tipoDeclarado = (tipo != null && "PROFESSOR".equalsIgnoreCase(tipo.trim())) ? "PROFESSOR"
+                : (tipo != null && "ALUNO".equalsIgnoreCase(tipo.trim()) ? "ALUNO" : null);
+
+        if ("PROFESSOR".equals(tipoDeclarado)) {
+            validarEmailProfessor(email);
+        } else if ("ALUNO".equals(tipoDeclarado)) {
+            validarEmailAluno(email);
+        }
+
         if (usuarioOpt.isEmpty()) {
-            // Cadastro explícito: o tipo informado é validado contra os domínios permitidos.
-            String tipoDeclarado = (tipo != null && "PROFESSOR".equalsIgnoreCase(tipo.trim())) ? "PROFESSOR"
-                    : (tipo != null && "ALUNO".equalsIgnoreCase(tipo.trim()) ? "ALUNO" : null);
-            if ("PROFESSOR".equals(tipoDeclarado)) {
-                validarEmailProfessor(email);
-            } else if ("ALUNO".equals(tipoDeclarado)) {
-                validarEmailAluno(email);
-            }
             Usuario novo = criarPerfilInicial(authId, email, tipoDeclarado, nome);
             return aplicarDadosDoPerfil(novo, nome, fotoPerfil, instituicao, biografia);
         }
 
         Usuario u = usuarioOpt.get();
 
-        // Se a declaração (token ou requisição) divergir do papel persistido, tenta migração segura.
-        String tipoDeclarado = obterTipoDeclaradoNoToken();
-        if (tipoDeclarado == null && tipo != null && !tipo.isBlank()) {
-            tipoDeclarado = "PROFESSOR".equalsIgnoreCase(tipo.trim()) ? "PROFESSOR" : "ALUNO";
-        }
+        // A migração depende da escolha explícita e validada, nunca de user_metadata editável.
         if (tipoDeclarado != null && !tipoDeclarado.equals(u.getTipo())) {
             Usuario migrado = migrarPapelSePossivel(u, tipoDeclarado, "sincronização explícita de perfil");
             if (migrado != null) {

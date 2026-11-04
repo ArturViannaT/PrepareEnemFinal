@@ -338,10 +338,12 @@
 
                 // Extrair parâmetros da URL
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const queryParams = new URLSearchParams(window.location.search);
                 const accessToken = hashParams.get('access_token');
-                const type = hashParams.get('type');
-                const errorCode = hashParams.get('error');
-                const errorDescription = hashParams.get('error_description');
+                const tokenHash = queryParams.get('token_hash');
+                const type = queryParams.get('type') || hashParams.get('type');
+                const errorCode = queryParams.get('error') || queryParams.get('error_code') || hashParams.get('error');
+                const errorDescription = queryParams.get('error_description') || hashParams.get('error_description');
 
                 console.log('URL Params:', { type, accessToken: accessToken ? 'present' : 'missing', errorCode });
 
@@ -356,6 +358,14 @@
                         `Erro: ${errorCode} - ${errorMsg}`
                     );
                     return;
+                }
+
+                if (tokenHash) {
+                    const { error } = await client.auth.verifyOtp({
+                        token_hash: tokenHash,
+                        type: type || 'signup'
+                    });
+                    if (error) throw error;
                 }
 
                 // Aguardar para garantir que Supabase processou o token
@@ -397,7 +407,7 @@
                 }, 3000);
 
             } catch (err) {
-                console.error('❌ Erro na confirmação:', err);
+                console.error(' Erro na confirmação:', err);
                 showError(
                     'Erro ao Confirmar E-mail',
                     err.message || 'Ocorreu um erro inesperado. Por favor, tente novamente.',

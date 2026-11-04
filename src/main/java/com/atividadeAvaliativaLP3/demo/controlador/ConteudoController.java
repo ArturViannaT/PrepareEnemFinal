@@ -1,6 +1,7 @@
 package com.atividadeAvaliativaLP3.demo.controlador;
 
 import com.atividadeAvaliativaLP3.demo.*;
+import com.atividadeAvaliativaLP3.demo.persistencia.*;
 import com.atividadeAvaliativaLP3.demo.dto.AvaliacaoRequisicao;
 import com.atividadeAvaliativaLP3.demo.dto.ConteudoRequisicao;
 import com.atividadeAvaliativaLP3.demo.dto.ConteudoResposta;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -150,6 +152,15 @@ public class ConteudoController {
     // RF5 & RF6. Acessar um conteúdo específico por ID e registrar no histórico
     @GetMapping("/{id}")
     public ResponseEntity<ConteudoResposta> obterConteudoEGravarHistorico(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(registrarAcessoConteudo(id));
+    }
+
+    @PostMapping("/{id}/access")
+    public ResponseEntity<ConteudoResposta> registrarAcesso(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(registrarAcessoConteudo(id));
+    }
+
+    private ConteudoResposta registrarAcessoConteudo(Integer id) {
         Usuario logado = usuarioServico.obterUsuarioLogado();
 
         Conteudo conteudo = conteudoRepository.findById(id)
@@ -160,11 +171,20 @@ public class ConteudoController {
             throw new RegraNegocioException("Acesso negado: Este conteúdo é privado.");
         }
 
-        // RF6. Gravar o histórico de acesso do usuário autenticado
-        HistoricoAcesso historico = new HistoricoAcesso(logado, id);
-        historicoAcessoRepository.save(historico);
+        if (!(logado instanceof Aluno)) {
+            return converterParaResposta(conteudo);
+        }
 
-        return ResponseEntity.ok(converterParaResposta(conteudo));
+        // Mantém apenas o acesso mais recente por aluno e material.
+        HistoricoAcesso historico = historicoAcessoRepository
+                .findFirstByUsuarioIdAndConteudoIdOrderByAcessadoEmDesc(logado.getId(), id)
+                .orElseGet(() -> new HistoricoAcesso(logado, id));
+        historico.setAcessadoEm(LocalDateTime.now());
+        historico = historicoAcessoRepository.save(historico);
+        historicoAcessoRepository.removerAcessosDuplicadosDeConteudo(
+                logado.getId(), id, historico.getHistoricoId());
+
+        return converterParaResposta(conteudo);
     }
 
     // RF4. Avaliar conteúdo publicado (1 a 5 estrelas) — atualiza a avaliação existente
@@ -237,25 +257,29 @@ public class ConteudoController {
         List<HistoricoAcesso> historico = historicoAcessoRepository
                 .findByUsuarioIdOrderByAcessadoEmDesc(logado.getId());
 
-        List<Map<String, Object>> response = new ArrayList<>();
+        Map<String, Map<String, Object>> acessosUnicos = new LinkedHashMap<>();
         for (HistoricoAcesso h : historico) {
+            if (h.getConteudoId() == null) {
+                continue;
+            }
+
             Map<String, Object> map = new HashMap<>();
             map.put("historicoId", h.getHistoricoId());
             map.put("acessadoEm", h.getAcessadoEm());
 
+            String chave = "material:" + h.getConteudoId();
+            map.put("tipo", "Material");
+            map.put("conteudoId", h.getConteudoId());
             Optional<Conteudo> contOpt = conteudoRepository.findById(h.getConteudoId());
             if (contOpt.isPresent()) {
-                Conteudo c = contOpt.get();
-                map.put("conteudoId", c.getConteudoId());
-                map.put("titulo", c.getTitulo());
-                map.put("materia", c.getMateria());
+                map.put("titulo", contOpt.get().getTitulo());
+                map.put("materia", contOpt.get().getMateria());
             } else {
-                map.put("conteudoId", h.getConteudoId());
-                map.put("titulo", "Conteúdo Excluído");
+                map.put("titulo", "Material excluído");
             }
-            response.add(map);
+            acessosUnicos.putIfAbsent(chave, map);
         }
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ArrayList<>(acessosUnicos.values()));
     }
 }

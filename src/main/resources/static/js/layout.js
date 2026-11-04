@@ -51,11 +51,18 @@ function preencherUsuarioNoHeader(usuario) {
     const nivelEl = document.getElementById('userLevel');
     const avatarEl = document.getElementById('userAvatar') || document.querySelector('.conteudoPrincipal .user-status .fotoperfil');
     if (usuario.tipo === 'PROFESSOR') {
-        if (pontosEl) pontosEl.textContent = 'Professor';
-        if (nivelEl) nivelEl.textContent = 'Verificado';
+        if (pontosEl && pontosEl.parentElement) pontosEl.parentElement.style.display = 'none';
+        if (nivelEl && nivelEl.parentElement) nivelEl.parentElement.style.display = 'none';
+        const statusEl = document.querySelector('.conteudoPrincipal .user-status');
+        if (statusEl && !statusEl.querySelector('.badge-professor-verificado')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-professor-verificado';
+            badge.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i> Professor Verificado';
+            statusEl.insertBefore(badge, avatarEl || null);
+        }
     } else {
         if (pontosEl) pontosEl.textContent = Math.round(usuario.pontos || 0) + ' pts';
-        if (nivelEl) nivelEl.textContent = 'Nivel ' + (usuario.nivel || 1);
+        if (nivelEl) nivelEl.textContent = 'Nível ' + (usuario.nivel || 1);
     }
     if (avatarEl) {
         avatarEl.innerHTML = usuario.fotoPerfil
@@ -106,7 +113,7 @@ async function montarLayout(usuarioConhecido) {
         const mensagem = document.getElementById('mensagemLayout');
         if (mensagem) {
             mensagem.className = 'message-error';
-            mensagem.textContent = 'Nao foi possivel carregar seus dados (' + erro.message + '). Verifique se o backend esta em execucao.';
+            mensagem.textContent = 'Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.';
         }
         return null;
     }

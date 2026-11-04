@@ -15,7 +15,7 @@
 
     <main class="conteudoPrincipal">
         <header>
-            <h1 id="saudacaoHeader">Olá, como vai treinar hoje?</h1>
+                    <h1 id="saudacaoHeader">Olá, como vai treinar hoje?</h1>
 
             <div class="user-status">
                 <div class="pontos" title="Pontos de experiência">
@@ -34,9 +34,9 @@
         <section class="action-cards">
             <div class="card quiz-card">
                 <div class="card-content">
-                    <h2>Quizzes Adaptativos</h2>
-                    <p>Teste seus conhecimentos com questões do ENEM. A pontuação varia conforme o seu desempenho e a dificuldade!</p>
-                    <a class="botao quiz-botao" href="quizzes.html">
+                    <h2 id="quizCardTitle">Quizzes</h2>
+                    <p id="quizCardDescription">Pratique com questões simuladas do ENEM e acompanhe sua evolução.</p>
+                    <a class="botao quiz-botao" id="quizCardAction" href="quizzes.html">
                         <i class="fas fa-play"></i> Começar
                     </a>
                 </div>
@@ -44,8 +44,8 @@
 
             <div class="card material-card">
                 <div class="card-content">
-                    <h2>Material Didático</h2>
-                    <p>Acesse conteúdos teóricos publicados por professores para fortalecer sua base de conhecimento.</p>
+                    <h2>Materiais</h2>
+                    <p>Acesse conteúdos teóricos e videoaulas para reforçar seus estudos.</p>
                     <a class="botao" href="conteudos.html">
                         <i class="fas fa-book-open"></i> Acessar
                     </a>
@@ -56,7 +56,7 @@
         <!-- Histórico de Desempenho em Quizzes -->
         <div class="card" style="margin-bottom: 2rem;" id="secaoTentativas">
             <h2><i class="fas fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i> Desempenho em Quizzes Realizados</h2>
-            <p>Seu histórico de quizzes concluídos, tempo gasto e pontos obtidos.</p>
+
             <div class="table-responsive">
             <table>
                 <thead>
@@ -78,13 +78,13 @@
 
         <!-- Histórico de Materiais Acessados -->
         <div class="card">
-            <h2><i class="fas fa-history" style="color: var(--secondary); margin-right: 0.5rem;"></i> Histórico de Conteúdos Acessados</h2>
-            <p>Últimos materiais teóricos que você visualizou na plataforma.</p>
+            <h2><i class="fas fa-history" style="color: var(--secondary); margin-right: 0.5rem;"></i> Histórico de Acessos</h2>
+
             <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th>Material</th>
+                        <th>Acesso</th>
                         <th>Matéria</th>
                         <th>Data/Hora de Acesso</th>
                     </tr>
@@ -107,7 +107,16 @@
             const me = await montarLayout();
             if (!me) return;
 
-            document.getElementById('saudacaoHeader').innerText = `Olá, ${me.nome}! Como vai treinar hoje?`;
+            const saudacao = document.getElementById('saudacaoHeader');
+            if (me.tipo === 'PROFESSOR') {
+                saudacao.innerText = `Olá, ${me.nome}! Gerencie seus materiais e quizzes.`;
+                document.getElementById('quizCardTitle').innerText = 'Crie um quiz';
+                document.getElementById('quizCardDescription').innerText = 'Publique uma nova atividade para seus alunos e acompanhe o desempenho.';
+                document.getElementById('quizCardAction').href = 'quizzes.html?aba=novo';
+                document.getElementById('quizCardAction').innerHTML = '<i class="fas fa-plus"></i> Criar quiz';
+            } else {
+                saudacao.innerText = `Olá, ${me.nome}! Como vai treinar hoje?`;
+            }
 
             if (me.tipo === 'ALUNO') {
                 carregarHistoricoTentativas();
@@ -115,8 +124,7 @@
                 // Área do professor: a seção de desempenho de quizzes não se aplica
                 document.getElementById('secaoTentativas').innerHTML =
                     '<h2><i class="fas fa-chalkboard-user" style="color: var(--primary); margin-right: 0.5rem;"></i> Área do Professor</h2>'
-                    + '<p class="hint">Você está autenticado como professor. Use o menu <strong>Materiais</strong> para publicar '
-                    + 'conteúdos e o menu <strong>Quizzes</strong> para criar atividades, questões, definir dificuldade e tempo limite.</p>';
+                    + '<p class="hint">Acesse <strong>Materiais</strong> ou <strong>Quizzes</strong> no menu lateral para publicar conteúdos e gerenciar suas atividades.</p>';
             }
 
             carregarHistoricoAcessos();
@@ -169,7 +177,7 @@
                     const dataFmt = new Date(h.acessadoEm).toLocaleString('pt-BR');
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><strong>${h.titulo}</strong></td>
+                        <td><strong>${h.titulo}</strong><span class="badge badge-azul" style="margin-left: 0.5rem;">${h.tipo || 'Material'}</span></td>
                         <td>${h.materia || 'Geral'}</td>
                         <td>${dataFmt}</td>
                     `;

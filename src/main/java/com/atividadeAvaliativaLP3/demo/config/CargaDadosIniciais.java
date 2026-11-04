@@ -1,6 +1,7 @@
 package com.atividadeAvaliativaLP3.demo.config;
 
 import com.atividadeAvaliativaLP3.demo.*;
+import com.atividadeAvaliativaLP3.demo.persistencia.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
